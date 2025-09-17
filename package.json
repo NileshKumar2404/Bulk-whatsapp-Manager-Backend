@@ -1,0 +1,40 @@
+{
+  "name": "bulk-whatsapp-manager-backend",
+  "version": "1.0.0",
+  "description": "This is a backend of bulk whatsapp messenger app",
+  "keywords": [
+    "Javascript",
+    "Mongodb",
+    "Node",
+    "Express",
+    "Bulk",
+    "Whatsapp"
+  ],
+  "homepage": "https://github.com/NileshKumar2404/Bulk-whatsapp-Manager-Backend#readme",
+  "bugs": {
+    "url": "https://github.com/NileshKumar2404/Bulk-whatsapp-Manager-Backend/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NileshKumar2404/Bulk-whatsapp-Manager-Backend.git"
+  },
+  "license": "ISC",
+  "author": "Nilesh Kumar",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon -r dotenv/config --experimental-json-modules src/index.js"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongodb": "^6.19.0",
+    "mongoose": "^8.18.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}
