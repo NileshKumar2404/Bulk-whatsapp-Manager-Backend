@@ -1,22 +1,35 @@
+// src/models/WhatsAppConnection.js
 import mongoose, { Schema } from "mongoose";
 
 const WhatsAppConnectionSchema = new Schema({
-    businessId: { type: Schema.Types.ObjectId, ref: "Business", required: true, unique: true, index: true },
+    businessId: {
+        type: Schema.Types.ObjectId,
+        ref: "Business",
+        required: true,
+        unique: true,
+        index: true
+    },
     provider: { type: String, enum: ["cloud"], default: "cloud" },
 
-    wabaId: { type: String, trim: true },           // Meta Business Account (WABA)
-    phoneNumberId: { type: String, trim: true },    // Cloud API phone number id
-    phoneNumber: { type: String, trim: true },      // E.164 human-readable
+    // Meta IDs
+    wabaId: { type: String, trim: true, required: true },
+    phoneNumberId: { type: String, trim: true, required: true, unique: true, index: true },
+    phoneNumber: { type: String, trim: true }, // E.164 for display
 
-    longLivedTokenEnc: { type: String, required: true }, // encrypted at rest
-    qualityRating: { type: String },                // informational
-    limitTier: { type: Number },                    // messaging limit tier
+    // Store encrypted (AES-GCM). We'll encrypt/decrypt in controller.
+    longLivedTokenEnc: { type: String, required: true },
+
+    // Informational (optional)
+    qualityRating: { type: String },
+    limitTier: { type: Number },
 
     status: { type: String, enum: ["connected", "paused", "error"], default: "connected" },
-    webhookVerifyToken: { type: String, trim: true } // used to verify hub.challenge
+
+    // Used for webhook GET verification
+    webhookVerifyToken: { type: String, trim: true, required: true }
 }, { timestamps: true });
 
-WhatsAppConnectionSchema.index({ businessId: 1 }, { unique: true });
 
-export const WhatsAppConnection = mongoose.models.WhatsAppConnection
-    || mongoose.model("WhatsAppConnection", WhatsAppConnectionSchema);
+
+export const WhatsAppConnection =
+    mongoose.models.WhatsAppConnection || mongoose.model("WhatsAppConnection", WhatsAppConnectionSchema);
