@@ -31,8 +31,10 @@ app.use((req, res, next) => {
 
 import userRoutes from './routes/user.routes.js'
 import waRoutes from './routes/wa.routes.js'
+import businessRouter from "./routes/business.routes.js"
 
 app.use('/api/v1/users', userRoutes)
 app.use('/api/v1/wa', waRoutes)
+app.use('/api/v1/business', businessRouter)
 
 export {app}
