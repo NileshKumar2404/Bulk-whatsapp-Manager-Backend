@@ -8,6 +8,5 @@ const BusinessSchema = new Schema({
     country: { type: String, trim: true } // e.g. "IN"
 }, { timestamps: true });
 
-BusinessSchema.index({ ownerId: 1 });
 
 export const Business = mongoose.models.Business || mongoose.model("Business", BusinessSchema);
