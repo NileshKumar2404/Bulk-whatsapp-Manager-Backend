@@ -4,8 +4,6 @@ import { asyncHandler } from "../utils/asyncHandler.js"
 import { User } from "../models/User.js"
 import { decodeExpUnix, verifyAccessToken } from "../utils/token.util.js"
 
-
-
 export const verifyUser = asyncHandler(async (req, res, next) => {
     try {
         const token = req.cookies?.accessToken || req.header
