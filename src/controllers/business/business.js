@@ -63,8 +63,11 @@ export const updateMyBusiness = asyncHandler(async (req, res) => {
         if (req.user.role !== "shop_owner") {
             return res.status(403).json(new ApiResponse(403, {}, "Only shop owner can update businesses"));
         }
-        if (String(req.user._id) !== String(business.ownerId)) {
-            return res.status(403).json(new ApiResponse(403, {}, "You are not allowed to update this business"));
+
+        if (req.user._id !== business.ownerId) {
+            return res
+            .status(403)
+            .json(new ApiResponse(403, {}, "You are not allowed to update this business"))
         }
 
 <<<<<<< HEAD
