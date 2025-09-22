@@ -30,11 +30,26 @@ app.use((req, res, next) => {
 // })
 
 import userRoutes from './routes/user.routes.js'
-import waRoutes from './routes/wa.routes.js'
+import { waRouter } from './routes/wa.routes.js'
 import businessRouter from "./routes/business.routes.js"
+import { customerRouter } from './routes/customer.routes.js'
+import { templateRouter } from './routes/template.routes.js'
+import { campaignRouter } from './routes/campaign.routes.js'
 
 app.use('/api/v1/users', userRoutes)
-app.use('/api/v1/wa', waRoutes)
 app.use('/api/v1/business', businessRouter)
+
+// health
+app.get("/api/v1/health", (req, res) => res.json({ ok: true }));
+
+// webhook (public)
+app.use("/api/v1", waRouter);
+
+// protected business routes
+app.use("/api/v1/customers", customerRouter);
+app.use("/api/v1/templates", templateRouter);
+app.use("/api/v1/campaigns", campaignRouter);
+// app.use("/api/v1", testRouter); // optional
+
 
 export {app}
