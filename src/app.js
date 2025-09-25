@@ -35,6 +35,7 @@ import businessRouter from "./routes/business.routes.js"
 import { customerRouter } from './routes/customer.routes.js'
 import { templateRouter } from './routes/template.routes.js'
 import { campaignRouter } from './routes/campaign.routes.js'
+import { testRouter } from './routes/test.routes.js'
 
 app.use('/api/v1/users', userRoutes)
 app.use('/api/v1/business', businessRouter)
@@ -49,7 +50,7 @@ app.use("/api/v1", waRouter);
 app.use("/api/v1/customers", customerRouter);
 app.use("/api/v1/templates", templateRouter);
 app.use("/api/v1/campaigns", campaignRouter);
-// app.use("/api/v1", testRouter); // optional
+app.use("/api/v1", testRouter); // optional
 
 
 export {app}
