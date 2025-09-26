@@ -12,8 +12,19 @@ export async function getTemplatesFromMeta({ name, limit = 50 } = {}) {
     if (name) params.name = name;
 
     const url = `${GRAPH}/${process.env.WABA_ID}/message_templates`;
-    const { data } = await axios.get(url, { params });
-    return data.data || [];
+    try {
+        const { data } = await axios.get(url, { params });
+        return data.data || [];
+    } catch (e) {
+        // <- surface the real Graph error
+        const status = e.response?.status || 500;
+        const body = e.response?.data || { error: e.message };
+        console.error("[GRAPH list templates ERROR]", status, body);
+        const err = new Error(body?.error?.message || `Graph error ${status}`);
+        err.status = status;
+        err.data = body;
+        throw err;
+    }
 }
 
 /** Create a template at Meta (returns created template meta or ‘submitted’) */
@@ -62,4 +73,27 @@ export async function assertTemplateApproved(name, language) {
         throw e;
     }
     return match;
+}
+
+export async function listTemplatesPage({ limit = 100, after } = {}) {
+    const params = {
+        access_token: process.env.WHATSAPP_TOKEN,
+        fields: "name,language,status,category,components",
+        limit
+    };
+    if (after) params.after = after;
+    const url = `${GRAPH}/${process.env.WABA_ID}/message_templates`;
+    const { data } = await axios.get(url, { params });
+    return data; // { data: [...], paging: { cursors, next } }
+}
+
+export async function listAllTemplates() {
+    const all = [];
+    let after;
+    do {
+        const page = await listTemplatesPage({ limit: 100, after });
+        all.push(...(page.data || []));
+        after = page.paging?.cursors?.after;
+    } while (after);
+    return all;
 }
