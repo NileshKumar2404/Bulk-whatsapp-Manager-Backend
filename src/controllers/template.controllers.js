@@ -1,20 +1,52 @@
 import { Template } from "../models/Template.js";
+import { createMetaTemplate, getTemplatesFromMeta, assertTemplateApproved } from "../controllers/service/meta.service.js";
 
-export const addTemplate = async (req, res) => {
-    const userId = req.user._id;
-    const { waName, language = "en_US", category, components = [], displayName } = req.body;
-    if (!waName || !category) return res.status(400).json({ error: "waName and category are required" });
-
+/** Create a template at Meta (Graph). Does not save locally. */
+export const createTemplateAtMeta = async (req, res) => {
     try {
-        const tpl = await Template.create({ userId, waName, language, category, components, displayName });
-        res.status(201).json(tpl);
+        const { name, category, language, components } = req.body;
+        if (!name || !category || !language) {
+            return res.status(400).json({ ok: false, message: "name, category, language are required" });
+        }
+        const data = await createMetaTemplate({ name, category, language, components });
+        return res.status(201).json({ ok: true, meta: data });
     } catch (e) {
-        res.status(400).json({ error: e.message });
+        const status = e.response?.status || 400;
+        return res.status(status).json({ ok: false, message: e.response?.data?.error?.message || e.message, details: e.response?.data });
     }
 };
 
-export const listTemplates = async (req, res) => {
-    const userId = req.user._id;
-    const docs = await Template.find({ userId }).sort({ createdAt: -1 });
+/** List templates from Meta */
+export const listMetaTemplates = async (req, res) => {
+    try {
+        const rows = await getTemplatesFromMeta({ name: req.query.name });
+        res.json({ ok: true, data: rows });
+    } catch (e) {
+        res.status(400).json({ ok: false, message: e.message });
+    }
+};
+
+/** Verify template (exists+approved) then save it locally for this user */
+export const saveVerifiedTemplate = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { waName, language, category, displayName } = req.body;
+        if (!waName || !language || !category) return res.status(400).json({ ok: false, message: "waName, language, category required" });
+
+        const meta = await assertTemplateApproved(waName, language);  // throws if not good
+        const tpl = await Template.findOneAndUpdate(
+            { userId, waName, language },
+            { $set: { category: category.toLowerCase(), components: meta.components || [], displayName } },
+            { new: true, upsert: true }
+        );
+        res.status(201).json(tpl);
+    } catch (e) {
+        res.status(e.status || 400).json({ ok: false, message: e.message });
+    }
+};
+
+/** List local templates (your DB) */
+export const listLocalTemplates = async (req, res) => {
+    const docs = await Template.find({ userId: req.user._id }).sort({ createdAt: -1 });
     res.json(docs);
 };

@@ -11,15 +11,10 @@ agenda.define("send-campaign", async (job) => {
     const campaign = await Campaign.findById(campaignId);
     if (!campaign || campaign.status !== "scheduled") return;
 
-    campaign.status = "running";
-    await campaign.save();
+    campaign.status = "running"; await campaign.save();
 
     const tpl = await Template.findById(campaign.templateId);
-    if (!tpl) {
-        campaign.status = "failed";
-        await campaign.save();
-        return;
-    }
+    if (!tpl) { campaign.status = "failed"; await campaign.save(); return; }
 
     const q = { userId: campaign.userId };
     if (campaign.filters?.tags?.length) q.tags = { $in: campaign.filters.tags };
@@ -30,7 +25,6 @@ agenda.define("send-campaign", async (job) => {
     for await (const cust of cursor) {
         total++;
         try {
-            // idempotency: ensure one log per campaign-customer
             await MessageLog.updateOne(
                 { campaignId, customerId: cust._id },
                 { $setOnInsert: { to: cust.phoneE164, status: "queued" } },
@@ -41,10 +35,10 @@ agenda.define("send-campaign", async (job) => {
                 to: cust.phoneE164,
                 templateName: tpl.waName,
                 language: tpl.language,
-                components: tpl.components
+                components: tpl.components || []
             });
 
-            const waMessageId = resp?.data?.messages?.[0]?.id;
+            const waMessageId = resp?.messages?.[0]?.id;
             await MessageLog.updateOne(
                 { campaignId, customerId: cust._id },
                 { $set: { waMessageId, status: "sent" } }
@@ -53,21 +47,18 @@ agenda.define("send-campaign", async (job) => {
         } catch (e) {
             await MessageLog.updateOne(
                 { campaignId, customerId: cust._id },
-                { $set: { status: "failed", error: e.response?.data || String(e) } }
+                { $set: { status: "failed", error: e.data || e.message } }
             );
             failed++;
         }
-
-        // gentle throttle to protect WABA health
-        await new Promise((r) => setTimeout(r, 150));
+        await new Promise(r => setTimeout(r, 150)); // throttle to protect your WABA
     }
 
     campaign.status = "done";
-    campaign.stats = { ...campaign.stats, total, sent, failed };
+    campaign.stats = { ...(campaign.stats || {}), total, sent, failed };
     await campaign.save();
 });
 
-// Helper to schedule a job
 export async function scheduleCampaign(campaign) {
     await agenda.start();
     await agenda.schedule(new Date(campaign.scheduledAt), "send-campaign", { campaignId: campaign._id });
