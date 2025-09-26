@@ -1,5 +1,5 @@
 import { Template } from "../models/Template.js";
-import { createMetaTemplate, getTemplatesFromMeta, assertTemplateApproved } from "../controllers/service/meta.service.js";
+import { createMetaTemplate, getTemplatesFromMeta, assertTemplateApproved, listAllTemplates, listTemplatesPage } from "../controllers/service/meta.service.js";
 
 /** Create a template at Meta (Graph). Does not save locally. */
 export const createTemplateAtMeta = async (req, res) => {
@@ -49,4 +49,23 @@ export const saveVerifiedTemplate = async (req, res) => {
 export const listLocalTemplates = async (req, res) => {
     const docs = await Template.find({ userId: req.user._id }).sort({ createdAt: -1 });
     res.json(docs);
+};
+
+export const listMetaTemplatesPaged = async (req, res) => {
+    try {
+        const { after, limit } = req.query;
+        const page = await listTemplatesPage({ after, limit: Number(limit) || 100 });
+        res.json({ ok: true, ...page });
+    } catch (e) {
+        res.status(400).json({ ok: false, message: e.response?.data?.error?.message || e.message, details: e.response?.data });
+    }
+};
+
+export const listMetaTemplatesAll = async (_req, res) => {
+    try {
+        const rows = await listAllTemplates();
+        res.json({ ok: true, count: rows.length, data: rows });
+    } catch (e) {
+        res.status(400).json({ ok: false, message: e.response?.data?.error?.message || e.message, details: e.response?.data });
+    }
 };

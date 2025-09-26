@@ -4,7 +4,8 @@ import {
     createTemplateAtMeta,
     listMetaTemplates,
     saveVerifiedTemplate,
-    listLocalTemplates
+    listLocalTemplates,
+    listMetaTemplatesAll
 } from "../controllers/template.controllers.js";
 
 export const templateRouter = express.Router();
@@ -16,3 +17,4 @@ templateRouter.get("/meta", verifyUser, listMetaTemplates);
 // Local (DB) operations
 templateRouter.post("/", verifyUser, saveVerifiedTemplate); // verify @ Meta then save
 templateRouter.get("/", verifyUser, listLocalTemplates);
+templateRouter.get("/meta/all", verifyUser, listMetaTemplatesAll);
