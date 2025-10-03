@@ -1,14 +1,7 @@
 import cors from 'cors'
 import express from 'express'
 import cookieParser from 'cookie-parser'
-import { engine } from 'express-handlebars'
-import path from 'path'
-import { fileURLToPath } from 'url'
 import { setupSwagger } from './swagger.js'
-import { verifyUser } from './middleware/authMiddleware.js'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
 
 const app = express()
 
@@ -135,7 +128,7 @@ app.use('/api/v1/users', userRoutes)
 app.use('/api/v1/business', businessRouter)
 
 // health
-app.get("/api/v1/health", (req, res) => res.json({ ok: true, message: "hello world 2" }));
+app.get("/api/v1/health", (req, res) => res.json({ ok: true,message : "hello world" }));
 
 // sample hello world
 app.get("/api/v1/hello", (req, res) => res.json({ message: "Hello, world!" }));

@@ -39,6 +39,8 @@
     "mongodb": "^6.19.0",
     "mongoose": "^8.18.2",
     "multer": "^2.0.2",
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1"
   }
 }
