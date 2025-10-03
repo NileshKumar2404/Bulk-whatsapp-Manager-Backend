@@ -1,6 +1,7 @@
 import cors from 'cors'
 import express from 'express'
 import cookieParser from 'cookie-parser'
+import { setupSwagger } from './swagger.js'
 
 const app = express()
 
@@ -41,7 +42,13 @@ app.use('/api/v1/users', userRoutes)
 app.use('/api/v1/business', businessRouter)
 
 // health
-app.get("/api/v1/health", (req, res) => res.json({ ok: true }));
+app.get("/api/v1/health", (req, res) => res.json({ ok: true,message : "hello world" }));
+
+// sample hello world
+app.get("/api/v1/hello", (req, res) => res.json({ message: "Hello, world!" }));
+
+// docs
+setupSwagger(app)
 
 // webhook (public)
 app.use("/api/v1", waRouter);
