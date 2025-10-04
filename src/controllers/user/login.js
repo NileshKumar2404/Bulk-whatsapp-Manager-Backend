@@ -28,15 +28,18 @@ export const loginUser = asyncHandler(async (req, res) => {
         user.refreshTokenExpiresAt = refreshExp ? new Date(refreshExp * 1000) : null;
         await user.save();
 
-        const options = {
+        const isProd = process.env.NODE_ENV === "production"
+
+        const cookieOptions = {
             httpOnly: true,
-            secure: true
+            secure: isProd,
+            sameSite: isProd ? "none": "lax"
         }
 
         return res
             .status(200)
-            .cookie("accessToken", accessToken, options)
-            .cookie("refreshToken", refreshToken, options)
+            .cookie("accessToken", accessToken, cookieOptions)
+            .cookie("refreshToken", refreshToken, cookieOptions)
             .json(new ApiResponse(200, { tokens: { accessToken, refreshToken }, user }, "Login Successful"))
 
     } catch (err) {

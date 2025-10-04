@@ -39,15 +39,16 @@ export default async function register(req, res) {
         createdUser.refreshTokenExpiresAt = refreshExp ? new Date(refreshExp * 1000) : null;
         await createdUser.save();
 
-        const options = {
+        const cookieOptions = {
             httpOnly: true,
-            secure: true
+            secure: isProd,
+            sameSite: isProd ? "none": "lax"
         }
 
         return res
             .status(200)
-            .cookie("accessToken", accessToken, options)
-            .cookie("refreshToken", refreshToken, options)
+            .cookie("accessToken", accessToken, cookieOptions)
+            .cookie("refreshToken", refreshToken, cookieOptions)
             .json(
                 new ApiResponse(200, { tokens: { accessToken, refreshToken }, user: createdUser }, "User registered Successfully")
             )
