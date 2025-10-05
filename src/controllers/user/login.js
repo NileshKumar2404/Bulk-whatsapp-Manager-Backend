@@ -7,7 +7,7 @@ export const loginUser = asyncHandler(async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ where: { email } });
         if (!user) {
             return res.status(401).json({ message: "Invalid email or password" });
         }
@@ -16,30 +16,24 @@ export const loginUser = asyncHandler(async (req, res) => {
         if (!isValid) {
             return res.status(401).json({ message: "Invalid email or password" });
         }
-        // if (user.role == 'admin') {
-        //     return res.status(403).json({ message: "You are not allowed to login as a user" });
-        // }
 
         const { accessToken, refreshToken, accessExp, refreshExp } = buildTokenPair(
-            user._id
+            user.id
         );
 
         user.refreshTokens = hashToken(refreshToken);
         user.refreshTokenExpiresAt = refreshExp ? new Date(refreshExp * 1000) : null;
         await user.save();
 
-        const isProd = process.env.NODE_ENV === "production"
-
-        const cookieOptions = {
+        const options = {
             httpOnly: true,
-            secure: isProd,
-            sameSite: isProd ? "none": "lax"
+            secure: process.env.NODE_ENV === "production"
         }
 
         return res
             .status(200)
-            .cookie("accessToken", accessToken, cookieOptions)
-            .cookie("refreshToken", refreshToken, cookieOptions)
+            .cookie("accessToken", accessToken, options)
+            .cookie("refreshToken", refreshToken, options)
             .json(new ApiResponse(200, { tokens: { accessToken, refreshToken }, user }, "Login Successful"))
 
     } catch (err) {
@@ -49,9 +43,9 @@ export const loginUser = asyncHandler(async (req, res) => {
 
 export const logoutUser = asyncHandler(async (req, res) => {
     try {
-        const userId = req.user._id;
+        const userId = req.user.id;
 
-        const user = await User.findById(userId);
+        const user = await User.findByPk(userId);
         if (!user) {
             return res.status(401).json({ message: "Invalid user" });
         }
@@ -63,7 +57,7 @@ export const logoutUser = asyncHandler(async (req, res) => {
 
         const options = {
             httpOnly: true,
-            secure: true,
+            secure: process.env.NODE_ENV === "production",
             expires: new Date(0) // Expire the cookie immediately
         };
 

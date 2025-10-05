@@ -1,18 +1,53 @@
-import mongoose, { Schema } from "mongoose";
+import { DataTypes } from 'sequelize';
+import { sequelize } from '../db/index.js';
 
-const logSchema = new Schema(
+const MessageLog = sequelize.define('MessageLog', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
+  campaignId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'campaigns',
+      key: 'id'
+    }
+  },
+  customerId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'customers',
+      key: 'id'
+    }
+  },
+  to: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  waMessageId: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  status: {
+    type: DataTypes.ENUM('queued', 'sent', 'delivered', 'read', 'failed'),
+    allowNull: false
+  },
+  error: {
+    type: DataTypes.JSON,
+    allowNull: true
+  }
+}, {
+  tableName: 'message_logs',
+  timestamps: true,
+  indexes: [
     {
-        campaignId: { type: Schema.Types.ObjectId, ref: "Campaign", index: true },
-        customerId: { type: Schema.Types.ObjectId, ref: "Customer", index: true },
-        to: { type: String, required: true },  // phone
-        waMessageId: { type: String, index: true },
-        status: { type: String, enum: ["queued", "sent", "delivered", "read", "failed"], index: true },
-        error: {}, // store raw error for debugging
-    },
-    { timestamps: true }
-);
+      unique: true,
+      fields: ['campaignId', 'customerId']
+    }
+  ]
+});
 
-// idempotency: avoid duplicate logs for same campaign-customer
-logSchema.index({ campaignId: 1, customerId: 1 }, { unique: true });
-
-export const MessageLog = mongoose.model("MessageLog", logSchema);
+export { MessageLog };

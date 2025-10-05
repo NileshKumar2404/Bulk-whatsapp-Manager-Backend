@@ -1,31 +1,51 @@
-import mongoose, { Schema } from "mongoose";
+import { DataTypes } from 'sequelize';
+import { sequelize } from '../db/index.js';
 
-const BusinessSchema = new Schema(
-    {
-        businessName: { type: String, required: true, trim: true },
-        phoneNo: { type: String, trim: true },
-        whatsappNo: { type: String, trim: true },
-        description: { type: String, trim: true },
-        ownerId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
-        category: { type: String, trim: true },
-        timezone: { type: String, default: "Asia/Kolkata" },
-        country: { type: String, trim: true },
-
-        // WhatsApp Cloud API config
-        waEnabled: { type: Boolean, default: false },
-        waPhoneNumberId: { type: String, trim: true },  // REQUIRED when waEnabled=true
-        waDefaultLanguage: { type: String, default: "en_US" },
-        waAccessToken: { type: String, select: false }, // keep hidden by default
-    },
-    { timestamps: true }
-);
-
-BusinessSchema.pre("save", function (next) {
-    if (this.waAccessToken) {
-        this.waAccessToken = this.waAccessToken.trim().replace(/^Bearer\s+/i, "");
+const Business = sequelize.define('Business', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
+  businessName: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  phoneNo: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  whatsappNo: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  description: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  ownerId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'users',
+      key: 'id'
     }
-    if (this.waPhoneNumberId) this.waPhoneNumberId = this.waPhoneNumberId.trim();
-    next();
+  },
+  category: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  timezone: {
+    type: DataTypes.STRING,
+    defaultValue: 'Asia/Kolkata'
+  },
+  country: {
+    type: DataTypes.STRING,
+    allowNull: true
+  }
+}, {
+  tableName: 'businesses',
+  timestamps: true
 });
 
-export const Business = mongoose.models.Business || mongoose.model("Business", BusinessSchema);
+export { Business };

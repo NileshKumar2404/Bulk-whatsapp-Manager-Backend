@@ -5,16 +5,26 @@ import {
     listMetaTemplates,
     saveVerifiedTemplate,
     listLocalTemplates,
-    listMetaTemplatesAll
+    listMetaTemplatesAll,
+    getAllTemplates,
+    createTemplate,
+    updateTemplate,
+    deleteTemplate
 } from "../controllers/template.controllers.js";
 
 export const templateRouter = express.Router();
+
+// New CRUD routes for frontend
+templateRouter.route("/").get(verifyUser, getAllTemplates);
+templateRouter.route("/").post(verifyUser, createTemplate);
+templateRouter.route("/:id").put(verifyUser, updateTemplate);
+templateRouter.route("/:id").delete(verifyUser, deleteTemplate);
 
 // Meta operations
 templateRouter.post("/meta", verifyUser, createTemplateAtMeta);
 templateRouter.get("/meta", verifyUser, listMetaTemplates);
 
-// Local (DB) operations
-templateRouter.post("/", verifyUser, saveVerifiedTemplate); // verify @ Meta then save
-templateRouter.get("/", verifyUser, listLocalTemplates);
+// Local (DB) operations (keeping for backward compatibility)
+templateRouter.post("/verify", verifyUser, saveVerifiedTemplate); // verify @ Meta then save
+templateRouter.get("/local", verifyUser, listLocalTemplates);
 templateRouter.get("/meta/all", verifyUser, listMetaTemplatesAll);

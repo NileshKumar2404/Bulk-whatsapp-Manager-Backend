@@ -29,16 +29,24 @@ export const listMetaTemplates = async (req, res) => {
 /** Verify template (exists+approved) then save it locally for this user */
 export const saveVerifiedTemplate = async (req, res) => {
     try {
-        const userId = req.user._id;
+        const userId = req.user.id;
         const { waName, language, category, displayName } = req.body;
         if (!waName || !language || !category) return res.status(400).json({ ok: false, message: "waName, language, category required" });
 
         const meta = await assertTemplateApproved(waName, language);  // throws if not good
-        const tpl = await Template.findOneAndUpdate(
-            { userId, waName, language },
-            { $set: { category: category.toLowerCase(), components: meta.components || [], displayName } },
-            { new: true, upsert: true }
-        );
+        const [tpl, created] = await Template.findOrCreate({
+            where: { userId, waName, language },
+            defaults: { category: category.toLowerCase(), components: meta.components || [], displayName }
+        });
+
+        if (!created) {
+            // Update existing template
+            tpl.category = category.toLowerCase();
+            tpl.components = meta.components || [];
+            tpl.displayName = displayName || tpl.displayName;
+            await tpl.save();
+        }
+
         res.status(201).json(tpl);
     } catch (e) {
         res.status(e.status || 400).json({ ok: false, message: e.message });
@@ -47,7 +55,10 @@ export const saveVerifiedTemplate = async (req, res) => {
 
 /** List local templates (your DB) */
 export const listLocalTemplates = async (req, res) => {
-    const docs = await Template.find({ userId: req.user._id }).sort({ createdAt: -1 });
+    const docs = await Template.findAll({
+        where: { userId: req.user.id },
+        order: [['createdAt', 'DESC']]
+    });
     res.json(docs);
 };
 
@@ -67,5 +78,89 @@ export const listMetaTemplatesAll = async (_req, res) => {
         res.json({ ok: true, count: rows.length, data: rows });
     } catch (e) {
         res.status(400).json({ ok: false, message: e.response?.data?.error?.message || e.message, details: e.response?.data });
+    }
+};
+
+// New CRUD functions for frontend
+export const getAllTemplates = async (req, res) => {
+    try {
+        const templates = await Template.findAll({
+            where: { userId: req.user.id },
+            order: [['createdAt', 'DESC']]
+        });
+        res.json(templates);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export const createTemplate = async (req, res) => {
+    try {
+        const { waName, language, category, displayName, components, htmlContent } = req.body;
+        
+        if (!waName || !category) {
+            return res.status(400).json({ error: "waName and category are required" });
+        }
+
+        const template = await Template.create({
+            userId: req.user.id,
+            waName,
+            language: language || 'en_US',
+            category: category.toLowerCase(),
+            displayName: displayName || waName,
+            components: components || [],
+            htmlContent: htmlContent || ''
+        });
+
+        res.status(201).json(template);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};
+
+export const updateTemplate = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { waName, language, category, displayName, components, htmlContent } = req.body;
+
+        const template = await Template.findOne({
+            where: { id, userId: req.user.id }
+        });
+
+        if (!template) {
+            return res.status(404).json({ error: "Template not found" });
+        }
+
+        await template.update({
+            waName: waName || template.waName,
+            language: language || template.language,
+            category: category ? category.toLowerCase() : template.category,
+            displayName: displayName || template.displayName,
+            components: components || template.components,
+            htmlContent: htmlContent !== undefined ? htmlContent : template.htmlContent
+        });
+
+        res.json(template);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};
+
+export const deleteTemplate = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const template = await Template.findOne({
+            where: { id, userId: req.user.id }
+        });
+
+        if (!template) {
+            return res.status(404).json({ error: "Template not found" });
+        }
+
+        await template.destroy();
+        res.json({ message: "Template deleted successfully" });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
     }
 };
