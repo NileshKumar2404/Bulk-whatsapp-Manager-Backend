@@ -1,28 +1,77 @@
-import mongoose, { Schema } from "mongoose";
-import bcrypt from "bcrypt";
+import { DataTypes } from 'sequelize';
+import { sequelize } from '../db/index.js';
+import bcrypt from 'bcrypt';
 
-const userSchema = new Schema({
-    avatarUrl: { type: String, trim: true },
-    firstName: { type: String, trim: true },
-    lastName: { type: String, trim: true },
-    phoneNo: { type: String, trim: true },
-    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    password: { type: String, required: true },
-    role: { type: String, enum: ["admin", "shop_owner", "shop_manager", "shop_worker"], default: "shop_owner" },
-    status: { type: String, enum: ["active", "invited", "disabled"], default: "active" },
-    refreshTokens: { type: String, default: null },
-    refreshTokenExpiresAt: { type: Date, default: null },
-}, { timestamps: true });
-
-userSchema.pre("save", async function (next) {
-    if (!this.isModified("password")) return next();
-
-    this.password = await bcrypt.hash(this.password, 10);
-    next();
+const User = sequelize.define('User', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
+  avatarUrl: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  firstName: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  lastName: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  phoneNo: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  email: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true,
+    validate: {
+      isEmail: true
+    }
+  },
+  password: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  role: {
+    type: DataTypes.ENUM('admin', 'shop_owner', 'shop_manager', 'shop_worker'),
+    defaultValue: 'shop_owner'
+  },
+  status: {
+    type: DataTypes.ENUM('active', 'invited', 'disabled'),
+    defaultValue: 'active'
+  },
+  refreshTokens: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  refreshTokenExpiresAt: {
+    type: DataTypes.DATE,
+    allowNull: true
+  }
+}, {
+  tableName: 'users',
+  timestamps: true,
+  hooks: {
+    beforeCreate: async (user) => {
+      if (user.password) {
+        user.password = await bcrypt.hash(user.password, 10);
+      }
+    },
+    beforeUpdate: async (user) => {
+      if (user.changed('password')) {
+        user.password = await bcrypt.hash(user.password, 10);
+      }
+    }
+  }
 });
 
-userSchema.methods.isPasswordCorrect = async function (password) {
-    return await bcrypt.compare(password, this.password);
+// Instance method
+User.prototype.isPasswordCorrect = async function(password) {
+  return await bcrypt.compare(password, this.password);
 };
 
-export const User = mongoose.model("User", userSchema);
+export { User };

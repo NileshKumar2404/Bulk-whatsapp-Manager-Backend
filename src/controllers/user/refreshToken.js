@@ -1,10 +1,8 @@
 import { signAccessToken, signRefreshToken, verifyAccessToken, verifyRefreshToken, buildTokenPair, hashToken } from "../../utils/token.util.js";
 import { User } from "../../models/User.js";
-// import { RefreshToken } from "../models/RefreshToken.js"; // keep if you’re using it
 
 export const refresh = async (req, res) => {
     try {
-        // const { refreshToken } = req.body || {};
         const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken || req.header("x-refresh-token")?.trim();
         if (!refreshToken) return res.status(400).json({ message: "refreshToken required" });
 
@@ -17,7 +15,7 @@ export const refresh = async (req, res) => {
         }
 
         // 2) find user and validate the stored hash/expiry
-        const user = await User.findById(decoded.sub);
+        const user = await User.findByPk(decoded.sub);
         console.log("User at refresh:", user);
         if (!user || !user.refreshTokens) {
             return res.status(401).json({ message: "no active session" });
@@ -27,7 +25,6 @@ export const refresh = async (req, res) => {
         if (user.refreshTokenExpiresAt && user.refreshTokenExpiresAt <= now) {
             return res.status(401).json({ message: "refresh token expired" });
         }
-
 
         console.log("User refreshTokens:", user.refreshTokens);
         console.log("Provided refreshToken:", decoded);
@@ -52,7 +49,7 @@ export const refresh = async (req, res) => {
         }
 
         // 3) rotate: new access + new refresh; overwrite on user
-        const { accessToken, refreshToken: newRefresh, accessExp, refreshExp } = buildTokenPair(user._id);
+        const { accessToken, refreshToken: newRefresh, accessExp, refreshExp } = buildTokenPair(user.id);
 
         // add my secure fields
         user.refreshTokens = hashToken(newRefresh);
@@ -61,7 +58,7 @@ export const refresh = async (req, res) => {
 
         const options = {
             httpOnly: true,
-            secure: true
+            secure: process.env.NODE_ENV === "production"
         }
 
         return res

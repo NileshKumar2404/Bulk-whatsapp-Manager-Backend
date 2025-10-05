@@ -7,14 +7,14 @@ import { buildTokenPair, hashToken } from '../../utils/token.util.js';
 
 export default async function register(req, res) {
     try {
-        const { firstName, lastName,phoneNo, email, password } = req.body || {};
-        if (!firstName ||!lastName ||!phoneNo || !email || !password) {
-            return res.status(404).json({ message: 'fullName, email and password required' });
+        const { firstName, lastName, phoneNo, email, password } = req.body || {};
+        if (!firstName || !lastName || !phoneNo || !email || !password) {
+            return res.status(404).json({ message: 'firstName, lastName, phoneNo, email and password required' });
         }
 
         console.log('registering user', email);
 
-        const exists = await User.findOne({ email });
+        const exists = await User.findOne({ where: { email } });
         if (exists) return res.status(404).json({ message: 'User already exists' });
 
         const user = await User.create({
@@ -26,29 +26,30 @@ export default async function register(req, res) {
             password,
         });
 
-        const createdUser = await User.findById(user._id).select("-password");
+        const createdUser = await User.findByPk(user.id, {
+            attributes: { exclude: ['password'] }
+        });
         if (!createdUser) {
             throw new ApiError(500, "Something went wrong while creating user");
         }
 
         // build tokens correctly
-        const { accessToken, refreshToken, accessExp, refreshExp } = buildTokenPair(createdUser._id);
+        const { accessToken, refreshToken, accessExp, refreshExp } = buildTokenPair(createdUser.id);
 
         // persist hashed refresh + expiry on user doc
         createdUser.refreshTokens = hashToken(refreshToken);
         createdUser.refreshTokenExpiresAt = refreshExp ? new Date(refreshExp * 1000) : null;
         await createdUser.save();
 
-        const cookieOptions = {
+        const options = {
             httpOnly: true,
-            secure: isProd,
-            sameSite: isProd ? "none": "lax"
+            secure: process.env.NODE_ENV === "production"
         }
 
         return res
             .status(200)
-            .cookie("accessToken", accessToken, cookieOptions)
-            .cookie("refreshToken", refreshToken, cookieOptions)
+            .cookie("accessToken", accessToken, options)
+            .cookie("refreshToken", refreshToken, options)
             .json(
                 new ApiResponse(200, { tokens: { accessToken, refreshToken }, user: createdUser }, "User registered Successfully")
             )

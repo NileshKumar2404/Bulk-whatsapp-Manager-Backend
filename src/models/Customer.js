@@ -1,16 +1,57 @@
-import mongoose, { Schema } from "mongoose";
+import { DataTypes } from 'sequelize';
+import { sequelize } from '../db/index.js';
 
-const customerSchema = new Schema(
+const Customer = sequelize.define('Customer', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
+  userId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'users',
+      key: 'id'
+    }
+  },
+  businessId: {
+    type: DataTypes.INTEGER,
+    allowNull: true, // Temporarily nullable to allow migration
+    references: {
+      model: 'businesses',
+      key: 'id'
+    }
+  },
+  name: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  phoneE164: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    validate: {
+      is: /^\+\d{8,15}$/
+    }
+  },
+  tags: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: []
+  },
+  consentAt: {
+    type: DataTypes.DATE,
+    allowNull: true
+  }
+}, {
+  tableName: 'customers',
+  timestamps: true,
+  indexes: [
     {
-        userId: { type: Schema.Types.ObjectId, ref: "User", index: true, required: true },
-        name: { type: String, trim: true },
-        phoneE164: { type: String, required: true, index: true }, // +9198...
-        tags: [{ type: String, trim: true }],
-        consentAt: { type: Date }, // store opt-in moment
-    },
-    { timestamps: true }
-);
+      unique: true,
+      fields: ['userId', 'phoneE164']
+    }
+  ]
+});
 
-customerSchema.index({ userId: 1, phoneE164: 1 }, { unique: true });
-
-export const Customer = mongoose.model("Customer", customerSchema);
+export { Customer };

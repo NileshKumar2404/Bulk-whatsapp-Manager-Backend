@@ -15,10 +15,9 @@ export const receiveWebhook = async (req, res) => {
 
         if (Array.isArray(value?.statuses)) {
             for (const s of value.statuses) {
-                await MessageLog.findOneAndUpdate(
-                    { waMessageId: s.id },
-                    { $set: { status: s.status } },
-                    { new: true }
+                await MessageLog.update(
+                    { status: s.status },
+                    { where: { waMessageId: s.id } }
                 );
             }
         }

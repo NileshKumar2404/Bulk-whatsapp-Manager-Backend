@@ -1,15 +1,51 @@
-import mongoose, { Schema } from "mongoose";
+import { DataTypes } from 'sequelize';
+import { sequelize } from '../db/index.js';
 
-const BusinessSchema = new Schema({
-    businessName: { type: String, required: true, trim: true },
-    phoneNo: { type: String, trim: true },
-    whatsappNo: { type: String, trim: true },
-    description: {type: String, trim: true},
-    ownerId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
-    category: { type: String, trim: true }, // e.g. "restaurant"
-    timezone: { type: String, default: "Asia/Kolkata" },
-    country: { type: String, trim: true } // e.g. "IN"
-}, { timestamps: true });
+const Business = sequelize.define('Business', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
+  businessName: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  phoneNo: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  whatsappNo: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  description: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  ownerId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'users',
+      key: 'id'
+    }
+  },
+  category: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  timezone: {
+    type: DataTypes.STRING,
+    defaultValue: 'Asia/Kolkata'
+  },
+  country: {
+    type: DataTypes.STRING,
+    allowNull: true
+  }
+}, {
+  tableName: 'businesses',
+  timestamps: true
+});
 
-
-export const Business = mongoose.models.Business || mongoose.model("Business", BusinessSchema);
+export { Business };
