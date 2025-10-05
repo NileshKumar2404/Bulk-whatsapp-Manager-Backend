@@ -106,7 +106,7 @@ export const getAllTemplates = async (req, res) => {
 export const createTemplate = async (req, res) => {
     try {
         const { waName, language, category, displayName, components, htmlContent } = req.body;
-
+        
         if (!waName || !category) {
             return res.status(400).json({ error: "waName and category are required" });
         }

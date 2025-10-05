@@ -9,48 +9,24 @@
                 </div>
                 
                 <nav class="nav flex-column">
-                    <!-- WhatsApp Menu -->
-                    <div class="menu-toggle" onclick="toggleMenu('whatsapp-submenu')">
-                        <div class="nav-link">
-                            <i class="fab fa-whatsapp"></i> WhatsApp
-                            <i class="fas fa-chevron-down float-end"></i>
-                        </div>
-                    </div>
-                    <div class="submenu show" id="whatsapp-submenu">
-                        <a class="nav-link" href="/dashboard">
-                            <i class="fas fa-tachometer-alt"></i> Dashboard
-                        </a>
-                        <a class="nav-link active" href="/business">
-                            <i class="fas fa-building"></i> Business
-                        </a>
-                        <a class="nav-link" href="/customers">
-                            <i class="fas fa-users"></i> Customers
-                        </a>
-                        <a class="nav-link" href="/templates">
-                            <i class="fas fa-file-alt"></i> Templates
-                        </a>
-                        <a class="nav-link" href="/campaigns">
-                            <i class="fas fa-bullhorn"></i> Campaigns
-                        </a>
-                        
-                    </div>
-                    
-                    <!-- HR Tools Menu -->
-                    <div class="menu-toggle" onclick="toggleMenu('hr-submenu')">
-                        <div class="nav-link">
-                            <i class="fas fa-users-cog"></i> HR Tools
-                            <i class="fas fa-chevron-down float-end"></i>
-                        </div>
-                    </div>
-                    <div class="submenu show" id="hr-submenu">
-                        <a class="nav-link" href="/employees">
-                            <i class="fas fa-user-tie"></i> Employee List
-                        </a>
-                    </div>
-                    
+                    <a class="nav-link" href="/dashboard">
+                        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                    </a>
+                    <a class="nav-link" href="/customers">
+                        <i class="fas fa-users me-2"></i>Customers
+                    </a>
+                    <a class="nav-link" href="/templates">
+                        <i class="fas fa-file-alt me-2"></i>Templates
+                    </a>
+                    <a class="nav-link" href="/campaigns">
+                        <i class="fas fa-bullhorn me-2"></i>Campaigns
+                    </a>
+                    <a class="nav-link active" href="/business">
+                        <i class="fas fa-building me-2"></i>Business
+                    </a>
                     <hr class="text-white-50">
                     <a class="nav-link" href="#" onclick="logout()">
-                        <i class="fas fa-sign-out-alt"></i> Logout
+                        <i class="fas fa-sign-out-alt me-2"></i>Logout
                     </a>
                 </nav>
             </div>
@@ -302,8 +278,8 @@
     // Load businesses data
     async function loadBusinesses() {
         try {
-            const data = await apiCall('/business'); // <-- already JSON
-            businesses = Array.isArray(data) ? data : (data?.data || []);
+            const response = await apiCall('/business');
+            businesses = await response.json();
             displayBusinesses(businesses);
         } catch (error) {
             console.error('Error loading businesses:', error);
@@ -316,7 +292,7 @@
     function displayBusinesses(businessesToShow) {
         const grid = document.getElementById('businessesGrid');
         
-        if (!Array.isArray(businessesToShow) || businessesToShow.length === 0) {
+        if (businessesToShow.length === 0) {
             grid.innerHTML = '<div class="col-12 text-center text-muted py-4">No businesses found</div>';
             return;
         }
@@ -326,7 +302,7 @@
                 <div class="card h-100">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start mb-3">
-                            <h5 class="card-title">${business.businessName || 'Untitled'}</h5>
+                            <h5 class="card-title">${business.businessName}</h5>
                             <div class="dropdown">
                                 <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown">
                                     <i class="fas fa-ellipsis-v"></i>
@@ -335,7 +311,7 @@
                                     <li><a class="dropdown-item" href="#" onclick="editBusiness(${business.id})">
                                         <i class="fas fa-edit me-2"></i>Edit
                                     </a></li>
-                                    <li><a class="dropdown-item text-danger" href="#" onclick="deleteBusiness(${business.id}, '${business.businessName || ''}', '${business.category || ''}')">
+                                    <li><a class="dropdown-item text-danger" href="#" onclick="deleteBusiness(${business.id}, '${business.businessName}', '${business.category}')">
                                         <i class="fas fa-trash me-2"></i>Delete
                                     </a></li>
                                 </ul>
@@ -348,11 +324,11 @@
                         <div class="row text-center">
                             <div class="col-6">
                                 <small class="text-muted">Phone</small><br>
-                                <small>${business.phoneNo || 'Not provided'}</small>
+                                <small>${business.phoneNo ? '+91' + business.phoneNo : 'Not provided'}</small>
                             </div>
                             <div class="col-6">
                                 <small class="text-muted">WhatsApp</small><br>
-                                <small>${business.whatsappNo || 'Not provided'}</small>
+                                <small>${business.whatsappNo ? '+91' + business.whatsappNo : 'Not provided'}</small>
                             </div>
                         </div>
                         <div class="mt-3">
@@ -364,7 +340,7 @@
                     </div>
                     <div class="card-footer bg-transparent">
                         <small class="text-muted">
-                            Created: ${business.createdAt ? new Date(business.createdAt).toLocaleDateString() : '—'}
+                            Created: ${new Date(business.createdAt).toLocaleDateString()}
                         </small>
                     </div>
                 </div>
@@ -374,30 +350,37 @@
 
     // Search businesses
     function searchBusinesses() {
-        const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
-        const filtered = (businesses || []).filter(b => 
-            (b.businessName || '').toLowerCase().includes(searchTerm) ||
-            (b.description || '').toLowerCase().includes(searchTerm) ||
-            (b.category || '').toLowerCase().includes(searchTerm)
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        const filteredBusinesses = businesses.filter(business => 
+            business.businessName.toLowerCase().includes(searchTerm) ||
+            (business.description && business.description.toLowerCase().includes(searchTerm)) ||
+            (business.category && business.category.toLowerCase().includes(searchTerm))
         );
-        displayBusinesses(filtered);
+        displayBusinesses(filteredBusinesses);
     }
 
     // Filter by category
     function filterByCategory() {
         const selectedCategory = document.getElementById('categoryFilter').value;
-        const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
         
-        let filtered = businesses || [];
-        if (selectedCategory) filtered = filtered.filter(b => (b.category || '') === selectedCategory);
-        if (searchTerm) {
-            filtered = filtered.filter(b => 
-                (b.businessName || '').toLowerCase().includes(searchTerm) ||
-                (b.description || '').toLowerCase().includes(searchTerm) ||
-                (b.category || '').toLowerCase().includes(searchTerm)
+        let filteredBusinesses = businesses;
+        
+        if (selectedCategory) {
+            filteredBusinesses = filteredBusinesses.filter(business => 
+                business.category === selectedCategory
             );
         }
-        displayBusinesses(filtered);
+        
+        if (searchTerm) {
+            filteredBusinesses = filteredBusinesses.filter(business => 
+                business.businessName.toLowerCase().includes(searchTerm) ||
+                (business.description && business.description.toLowerCase().includes(searchTerm)) ||
+                (business.category && business.category.toLowerCase().includes(searchTerm))
+            );
+        }
+        
+        displayBusinesses(filteredBusinesses);
     }
 
     // Clear filters
@@ -407,49 +390,47 @@
         displayBusinesses(businesses);
     }
 
-    // Normalize phone input -> +91xxxxxxxxxx (digits only)
-    function normPhone(value) {
-        if (!value) return '';
-        const digits = String(value).replace(/\D/g, '');
-        if (!digits) return '';
-        // if already starts with 91 and length 12 (including country), keep +91
-        if (digits.length === 12 && digits.startsWith('91')) return '+'.concat(digits);
-        // otherwise assume 10-digit local and prefix +91
-        if (digits.length === 10) return '+91' + digits;
-        // fallback: return with plus
-        return '+' + digits;
-    }
-
     // Add business function
     async function addBusiness() {
         const form = document.getElementById('addBusinessForm');
         const formData = new FormData(form);
         
+        // Process phone numbers
+        let phoneNo = formData.get('phoneNo');
+        if (phoneNo && !phoneNo.startsWith('+91')) {
+            phoneNo = '+91' + phoneNo;
+        }
+        
+        let whatsappNo = formData.get('whatsappNo');
+        if (whatsappNo && !whatsappNo.startsWith('+91')) {
+            whatsappNo = '+91' + whatsappNo;
+        }
+        
         const businessData = {
-            businessName: formData.get('businessName')?.trim(),
+            businessName: formData.get('businessName'),
             category: formData.get('category'),
-            description: formData.get('description')?.trim(),
-            phoneNo: normPhone(formData.get('phoneNo')),
-            whatsappNo: normPhone(formData.get('whatsappNo')),
+            description: formData.get('description'),
+            phoneNo: phoneNo,
+            whatsappNo: whatsappNo,
             country: formData.get('country'),
             timezone: formData.get('timezone')
         };
 
         try {
-            const data = await apiCall('/business', {
+            const response = await apiCall('/business', {
                 method: 'POST',
                 body: JSON.stringify(businessData)
-            }); // <- already JSON
+            });
 
-            // success if no error field present
-            if (data && !data.error) {
+            if (response.ok) {
                 const modal = bootstrap.Modal.getInstance(document.getElementById('addBusinessModal'));
-                modal?.hide();
+                modal.hide();
                 form.reset();
                 loadBusinesses();
                 showAlert('Business added successfully!', 'success');
             } else {
-                showAlert((data && (data.message || data.error)) || 'Failed to add business', 'danger');
+                const error = await response.json();
+                showAlert(error.message || 'Failed to add business', 'danger');
             }
         } catch (error) {
             showAlert('Network error. Please try again.', 'danger');
@@ -458,7 +439,7 @@
 
     // Edit business function
     function editBusiness(businessId) {
-        const business = (businesses || []).find(b => b.id === businessId);
+        const business = businesses.find(b => b.id === businessId);
         if (!business) return;
 
         document.getElementById('editBusinessId').value = business.id;
@@ -468,10 +449,18 @@
         document.getElementById('editCountry').value = business.country || '';
         document.getElementById('editTimezone').value = business.timezone || 'Asia/Kolkata';
         
-        // strip + and country for inputs
-        const strip91 = v => (v || '').replace(/^\+91/, '');
-        document.getElementById('editPhoneNo').value = strip91(business.phoneNo);
-        document.getElementById('editWhatsappNo').value = strip91(business.whatsappNo);
+        // Extract phone numbers without +91
+        let phoneNo = business.phoneNo || '';
+        if (phoneNo.startsWith('+91')) {
+            phoneNo = phoneNo.substring(3);
+        }
+        document.getElementById('editPhoneNo').value = phoneNo;
+        
+        let whatsappNo = business.whatsappNo || '';
+        if (whatsappNo.startsWith('+91')) {
+            whatsappNo = whatsappNo.substring(3);
+        }
+        document.getElementById('editWhatsappNo').value = whatsappNo;
 
         const modal = new bootstrap.Modal(document.getElementById('editBusinessModal'));
         modal.show();
@@ -482,12 +471,23 @@
         const form = document.getElementById('editBusinessForm');
         const formData = new FormData(form);
         
+        // Process phone numbers
+        let phoneNo = formData.get('phoneNo');
+        if (phoneNo && !phoneNo.startsWith('+91')) {
+            phoneNo = '+91' + phoneNo;
+        }
+        
+        let whatsappNo = formData.get('whatsappNo');
+        if (whatsappNo && !whatsappNo.startsWith('+91')) {
+            whatsappNo = '+91' + whatsappNo;
+        }
+        
         const businessData = {
-            businessName: formData.get('businessName')?.trim(),
+            businessName: formData.get('businessName'),
             category: formData.get('category'),
-            description: formData.get('description')?.trim(),
-            phoneNo: normPhone(formData.get('phoneNo')),
-            whatsappNo: normPhone(formData.get('whatsappNo')),
+            description: formData.get('description'),
+            phoneNo: phoneNo,
+            whatsappNo: whatsappNo,
             country: formData.get('country'),
             timezone: formData.get('timezone')
         };
@@ -495,18 +495,19 @@
         const businessId = formData.get('id');
 
         try {
-            const data = await apiCall(`/business/${businessId}`, {
+            const response = await apiCall(`/business/${businessId}`, {
                 method: 'PUT',
                 body: JSON.stringify(businessData)
-            }); // <- already JSON
+            });
 
-            if (data && !data.error) {
+            if (response.ok) {
                 const modal = bootstrap.Modal.getInstance(document.getElementById('editBusinessModal'));
-                modal?.hide();
+                modal.hide();
                 loadBusinesses();
                 showAlert('Business updated successfully!', 'success');
             } else {
-                showAlert((data && (data.message || data.error)) || 'Failed to update business', 'danger');
+                const error = await response.json();
+                showAlert(error.error || 'Failed to update business', 'danger');
             }
         } catch (error) {
             showAlert('Network error. Please try again.', 'danger');
@@ -516,8 +517,8 @@
     // Delete business function
     function deleteBusiness(businessId, businessName, businessCategory) {
         currentDeleteId = businessId;
-        document.getElementById('deleteBusinessName').textContent = businessName || '';
-        document.getElementById('deleteBusinessCategory').textContent = businessCategory || '';
+        document.getElementById('deleteBusinessName').textContent = businessName;
+        document.getElementById('deleteBusinessCategory').textContent = businessCategory;
         
         const modal = new bootstrap.Modal(document.getElementById('deleteBusinessModal'));
         modal.show();
@@ -525,30 +526,31 @@
 
     // Confirm delete business function
     async function confirmDeleteBusiness() {
-    if (!currentDeleteId) return;
+        if (!currentDeleteId) return;
 
-    try {
-      const data = await apiCall(`/business/${currentDeleteId}`, {
-        method: 'DELETE'
-      }); // apiCall returns JSON or may be undefined on 204
+        try {
+            const response = await apiCall(`/business/${currentDeleteId}`, {
+                method: 'DELETE'
+            });
 
-      // Success if no error OR if server returned 204 (apiCall -> undefined)
-      if (data === undefined || (data && !data.error)) {
-        const modal = bootstrap.Modal.getInstance(document.getElementById('deleteBusinessModal'));
-        modal?.hide();
-        loadBusinesses();
-        showAlert('Business deleted successfully!', 'success');
-      } else {
-        showAlert((data.message || data.error) || 'Failed to delete business', 'danger');
-      }
-    } catch (error) {
-      showAlert('Network error. Please try again.', 'danger');
-    } finally {
-      currentDeleteId = null;
+            if (response.ok) {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('deleteBusinessModal'));
+                modal.hide();
+                loadBusinesses();
+                showAlert('Business deleted successfully!', 'success');
+            } else {
+                const error = await response.json();
+                showAlert(error.error || 'Failed to delete business', 'danger');
+            }
+        } catch (error) {
+            showAlert('Network error. Please try again.', 'danger');
+        } finally {
+            currentDeleteId = null;
+        }
     }
-  }
 
     function showAlert(message, type) {
+        // Create alert element
         const alertDiv = document.createElement('div');
         alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
         alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
@@ -556,8 +558,15 @@
             ${message}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         `;
+        
         document.body.appendChild(alertDiv);
-        setTimeout(() => { alertDiv.remove(); }, 5000);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.parentNode.removeChild(alertDiv);
+            }
+        }, 5000);
     }
 
     // Load data when page loads
