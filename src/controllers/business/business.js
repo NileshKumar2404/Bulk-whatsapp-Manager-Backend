@@ -1,9 +1,9 @@
-// controllers/business.controller.js
-import { asyncHandler } from "../../utils/asyncHandler.js";
-import { ApiError } from "../../utils/ApiError.js";
-import { ApiResponse } from "../../utils/ApiResponse.js";
-import { User } from "../../models/User.js";
-import { Business } from "../../models/Business.js";
+import { asyncHandler } from "../../utils/asyncHandler.js"
+import { ApiError } from "../../utils/ApiError.js"
+import { ApiResponse } from "../../utils/ApiResponse.js"
+import { User } from "../../models/User.js"
+import { Business } from "../../models/Business.js"
+import { Op } from 'sequelize';
 
 function escapeRegex(s = "") {
     return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -11,17 +11,12 @@ function escapeRegex(s = "") {
 
 export const createBusiness = asyncHandler(async (req, res) => {
     try {
-        const { businessName, country, category, description } = req.body || {};
-        if (!businessName || !country || !category) {
-            return res.status(400).json(new ApiResponse(400, {}, "businessName, country, category are required"));
-        }
-        if (req.user.role !== "shop_owner") {
-            return res.status(403).json(new ApiResponse(403, {}, "Only shop owner can create businesses"));
-        }
+        const { businessName, timezone, country, category, description, phoneNo, whatsappNo } = req.body || {}
 
-        const existing = await Business.findOne({ ownerId: req.user._id });
-        if (existing) {
-            return res.status(400).json(new ApiResponse(400, {}, "You already have a business"));
+        if (!businessName || !country || !category) return res.status(400).json(new ApiResponse(400, {}, "Business name, country and category are required"));
+
+        if (req.user.role !== "shop_owner") {
+            return res.status(403).json(new ApiResponse(403, {}, "Only shop owner can create businesses"))
         }
 
         const business = await Business.create({
@@ -29,10 +24,18 @@ export const createBusiness = asyncHandler(async (req, res) => {
             description,
             country,
             category,
-            ownerId: req.user._id,
-        });
+            phoneNo,
+            whatsappNo,
+            ownerId: req.user.id
+        })
 
-        return res.status(201).json(new ApiResponse(201, { business }, "Business created successfully"));
+        return res
+            .status(201)
+            .json(new ApiResponse(
+                201,
+                { business },
+                "Business created successfully"
+            ))
     } catch (error) {
         console.log("Error: ", error);
         throw new ApiError(500, "Internal server error");
@@ -41,11 +44,19 @@ export const createBusiness = asyncHandler(async (req, res) => {
 
 export const getMyBusiness = asyncHandler(async (req, res) => {
     try {
-        const businesses = await Business.find({ ownerId: req.user._id });
-        if (!businesses || businesses.length === 0) {
-            return res.status(404).json(new ApiResponse(404, {}, "Business not found"));
+        const business = await Business.findAll({ where: { ownerId: req.user.id } })
+        if (!business || business.length === 0) {
+            return res
+                .status(404)
+                .json(new ApiResponse(404, {}, "Business not found"))
         }
-        return res.status(200).json(new ApiResponse(200, { businesses }, "Business(es) found successfully"));
+        return res
+            .status(200)
+            .json(new ApiResponse(
+                200,
+                { business },
+                "Business found successfully"
+            ))
     } catch (error) {
         console.log("Error: ", error);
         throw new ApiError(500, "Internal server error");
@@ -54,25 +65,38 @@ export const getMyBusiness = asyncHandler(async (req, res) => {
 
 export const updateMyBusiness = asyncHandler(async (req, res) => {
     try {
-        const { businessId } = req.params;
-        const { businessName, description, category } = req.body;
+        const { businessId } = req.params
+        const { name, description, category } = req.body
 
-        const business = await Business.findById(businessId);
-        if (!business) return res.status(404).json(new ApiResponse(404, {}, "Business not found"));
+        const business = await Business.findByPk(businessId)
+        if (!business) {
+            return res
+                .status(404)
+                .json(new ApiResponse(404, {}, "Business not found"))
+        }
 
         if (req.user.role !== "shop_owner") {
-            return res.status(403).json(new ApiResponse(403, {}, "Only shop owner can update businesses"));
-        }
-        if (String(req.user._id) !== String(business.ownerId)) {
-            return res.status(403).json(new ApiResponse(403, {}, "You are not allowed to update this business"));
+            return res.status(403).json(new ApiResponse(403, {}, "Only shop owner can update businesses"))
         }
 
-        if (businessName) business.businessName = businessName;
-        if (description) business.description = description;
-        if (category) business.category = category;
-        await business.save();
+        if (req.user.id !== business.ownerId) {
+            return res
+                .status(403)
+                .json(new ApiResponse(403, {}, "You are not allowed to update this business"))
+        }
 
-        return res.status(200).json(new ApiResponse(200, { business }, "Business updated successfully"));
+        business.businessName = name || business.businessName
+        business.description = description || business.description
+        business.category = category || business.category
+        await business.save()
+
+        return res
+            .status(200)
+            .json(new ApiResponse(
+                200,
+                { business },
+                "Business updated successfully"
+            ))
     } catch (error) {
         console.log("Error: ", error);
         throw new ApiError(500, "Internal server error");
@@ -81,17 +105,34 @@ export const updateMyBusiness = asyncHandler(async (req, res) => {
 
 export const deleteMyBusiness = asyncHandler(async (req, res) => {
     try {
-        const { businessId } = req.params;
-        const existing = await Business.findById(businessId);
-        if (!existing) return res.status(404).json(new ApiResponse(404, {}, "Business not found"));
+        const { businessId } = req.params
+
+        const existing = await Business.findByPk(businessId)
+        if (!existing) {
+            return res
+                .status(404)
+                .json(new ApiResponse(404, {}, "Business not found"))
+        }
+
         if (req.user.role !== "shop_owner") {
-            return res.status(403).json(new ApiResponse(403, {}, "Only shop owner can delete businesses"));
+            return res.status(403).json(new ApiResponse(403, {}, "Only shop owner can delete businesses"))
         }
-        if (String(req.user._id) !== String(existing.ownerId)) {
-            return res.status(403).json(new ApiResponse(403, {}, "You are not allowed to delete this business"));
+
+        if (req.user.id !== existing.ownerId) {
+            return res
+                .status(403)
+                .json(new ApiResponse(403, {}, "You are not allowed to delete this business"))
         }
-        await Business.findByIdAndDelete(businessId);
-        return res.status(200).json(new ApiResponse(200, {}, "Business deleted successfully"));
+
+        await Business.destroy({ where: { id: businessId } })
+
+        return res
+            .status(200)
+            .json(new ApiResponse(
+                200,
+                {},
+                "Business deleted successfully"
+            ))
     } catch (error) {
         console.log("Error: ", error);
         throw new ApiError(500, "Internal server error");

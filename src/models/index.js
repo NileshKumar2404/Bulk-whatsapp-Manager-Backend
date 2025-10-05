@@ -4,52 +4,34 @@ import { Customer } from './Customer.js';
 import { Template } from './Template.js';
 import { Campaign } from './Campaign.js';
 import { MessageLog } from './MessageLog.js';
-import Employee from './Employee.js';
 
-/**
- * IMPORTANT:
- * - Business.ownerId is the FK to User (not userId).
- * - Campaign belongs to Business (missing before).
- * - Keep aliases used in controllers: 'business', 'template', etc.
- */
-
-// User ⇄ Business  (Business.ownerId)
+// Define associations
 User.hasMany(Business, { foreignKey: 'ownerId', as: 'businesses' });
 Business.belongsTo(User, { foreignKey: 'ownerId', as: 'owner' });
 
-// User ⇄ Customer
 User.hasMany(Customer, { foreignKey: 'userId', as: 'customers' });
 Customer.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
-// Business ⇄ Customer
 Business.hasMany(Customer, { foreignKey: 'businessId', as: 'customers' });
 Customer.belongsTo(Business, { foreignKey: 'businessId', as: 'business' });
 
-// User ⇄ Template
 User.hasMany(Template, { foreignKey: 'userId', as: 'templates' });
 Template.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
-// User ⇄ Campaign
 User.hasMany(Campaign, { foreignKey: 'userId', as: 'campaigns' });
 Campaign.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
-// Business ⇄ Campaign   ✅ NEW
-Business.hasMany(Campaign, { foreignKey: 'businessId', as: 'campaigns' });
-Campaign.belongsTo(Business, { foreignKey: 'businessId', as: 'business' });
-
-// Template ⇄ Campaign
 Template.hasMany(Campaign, { foreignKey: 'templateId', as: 'campaigns' });
 Campaign.belongsTo(Template, { foreignKey: 'templateId', as: 'template' });
 
-// Campaign/Customer/Template ⇄ MessageLog
+Business.hasMany(Campaign, { foreignKey: 'businessId', as: 'campaigns' });
+Campaign.belongsTo(Business, { foreignKey: 'businessId', as: 'business' });
+
 Campaign.hasMany(MessageLog, { foreignKey: 'campaignId', as: 'messageLogs' });
 MessageLog.belongsTo(Campaign, { foreignKey: 'campaignId', as: 'campaign' });
 
 Customer.hasMany(MessageLog, { foreignKey: 'customerId', as: 'messageLogs' });
 MessageLog.belongsTo(Customer, { foreignKey: 'customerId', as: 'customer' });
-
-Template.hasMany(MessageLog, { foreignKey: 'templateId', as: 'messageLogs' });
-MessageLog.belongsTo(Template, { foreignKey: 'templateId', as: 'template' });
 
 export {
   User,
@@ -57,6 +39,5 @@ export {
   Customer,
   Template,
   Campaign,
-  MessageLog,
-  Employee
+  MessageLog
 };

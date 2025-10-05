@@ -1,7 +1,14 @@
 import cors from 'cors'
 import express from 'express'
 import cookieParser from 'cookie-parser'
+import { engine } from 'express-handlebars'
+import path from 'path'
+import { fileURLToPath } from 'url'
 import { setupSwagger } from './swagger.js'
+import { verifyUser } from './middleware/authMiddleware.js'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 const app = express()
 
@@ -48,34 +55,8 @@ import { campaignRouter } from './routes/campaign.routes.js'
 import { employeeRouter } from './routes/employee.routes.js'
 import { testRouter } from './routes/test.routes.js'
 
-// Frontend routes - MUST come before static middleware
+// Frontend routes
 app.get("/", (req, res) => res.redirect("/login"));
-
-// Clear storage route
-app.get("/clear-storage", (req, res) => {
-    res.send(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Clearing Storage...</title>
-            <style>
-                body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
-                .message { color: #28a745; font-size: 18px; }
-            </style>
-        </head>
-        <body>
-            <div class="message">Clearing localStorage and redirecting to login...</div>
-            <script>
-                localStorage.clear();
-                sessionStorage.clear();
-                setTimeout(() => {
-                    window.location.replace('/login');
-                }, 1000);
-            </script>
-        </body>
-        </html>
-    `);
-});
 app.get("/login", (req, res) => res.render("login", { title: "Login" }));
 app.get("/register", (req, res) => res.render("register", { title: "Register" }));
 app.get("/dashboard", verifyUser, (req, res) => {
@@ -113,22 +94,12 @@ app.get("/campaigns", verifyUser, (req, res) => {
     };
     res.render("campaigns", { title: "Campaigns", user });
 });
-app.get("/employees", verifyUser, (req, res) => {
-    const user = { 
-        firstName: req.user.firstName, 
-        lastName: req.user.lastName 
-    };
-    res.render("employees", { title: "Employee Management", user });
-});
-
-// Static files - serve after routes to avoid conflicts
-app.use(express.static("public"))
 
 app.use('/api/v1/users', userRoutes)
 app.use('/api/v1/business', businessRouter)
 
 // health
-app.get("/api/v1/health", (req, res) => res.json({ ok: true,message : "hello world" }));
+app.get("/api/v1/health", (req, res) => res.json({ ok: true,message : "hello world 2" }));
 
 // sample hello world
 app.get("/api/v1/hello", (req, res) => res.json({ message: "Hello, world!" }));
