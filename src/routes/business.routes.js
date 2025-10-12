@@ -1,6 +1,6 @@
 import express from 'express'
 import { verifyUser } from '../middleware/authMiddleware.js'
-import { createBusiness, deleteMyBusiness, getMyBusiness, listBusinesses_admin, transferOwnerShip_admin, updateMyBusiness, getAllMyBusinesses, updateBusinessById } from '../controllers/business/business.js'
+import { createBusiness, deleteMyBusiness, getMyBusiness, listBusinesses_admin, transferOwnerShip_admin, updateMyBusiness, updateWAConfigMyBusiness } from '../controllers/business/business.js'
 
 const router = express.Router()
 

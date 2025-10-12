@@ -37,6 +37,15 @@ app.use((req, res, next) => {
     next();
 });
 
+app.use(express.urlencoded({extended: true}))
+app.use(cookieParser())
+app.use(express.json())
+app.use(express.static('public'))
+// app.use((req, res, next) => {
+//     console.log(`request body: ${req.body}`);
+//     next()
+// })
+
 import userRoutes from './routes/user.routes.js'
 import { waWebhookRouter } from './routes/wa.routes.js'
 import businessRouter from "./routes/business.routes.js"
