@@ -37,6 +37,15 @@ app.use((req, res, next) => {
     next();
 });
 
+app.use(express.urlencoded({extended: true}))
+app.use(cookieParser())
+app.use(express.json())
+app.use(express.static('public'))
+// app.use((req, res, next) => {
+//     console.log(`request body: ${req.body}`);
+//     next()
+// })
+
 import userRoutes from './routes/user.routes.js'
 import { waWebhookRouter } from './routes/wa.routes.js'
 import businessRouter from "./routes/business.routes.js"
@@ -77,44 +86,44 @@ app.get("/clear-storage", (req, res) => {
 app.get("/login", (req, res) => res.render("login", { title: "Login" }));
 app.get("/register", (req, res) => res.render("register", { title: "Register" }));
 app.get("/dashboard", verifyUser, (req, res) => {
-    const user = { 
-        firstName: req.user.firstName, 
-        lastName: req.user.lastName 
+    const user = {
+        firstName: req.user.firstName,
+        lastName: req.user.lastName
     };
     res.render("dashboard", { title: "Dashboard", user });
 });
 app.get("/customers", verifyUser, (req, res) => {
-    const user = { 
-        firstName: req.user.firstName, 
-        lastName: req.user.lastName 
+    const user = {
+        firstName: req.user.firstName,
+        lastName: req.user.lastName
     };
     res.render("customers", { title: "Customers", user });
 });
 app.get("/business", verifyUser, (req, res) => {
-    const user = { 
-        firstName: req.user.firstName, 
-        lastName: req.user.lastName 
+    const user = {
+        firstName: req.user.firstName,
+        lastName: req.user.lastName
     };
     res.render("business", { title: "Business", user });
 });
 app.get("/templates", verifyUser, (req, res) => {
-    const user = { 
-        firstName: req.user.firstName, 
-        lastName: req.user.lastName 
+    const user = {
+        firstName: req.user.firstName,
+        lastName: req.user.lastName
     };
     res.render("templates", { title: "Templates", user });
 });
 app.get("/campaigns", verifyUser, (req, res) => {
-    const user = { 
-        firstName: req.user.firstName, 
-        lastName: req.user.lastName 
+    const user = {
+        firstName: req.user.firstName,
+        lastName: req.user.lastName
     };
     res.render("campaigns", { title: "Campaigns", user });
 });
 app.get("/employees", verifyUser, (req, res) => {
-    const user = { 
-        firstName: req.user.firstName, 
-        lastName: req.user.lastName 
+    const user = {
+        firstName: req.user.firstName,
+        lastName: req.user.lastName
     };
     res.render("employees", { title: "Employee Management", user });
 });
@@ -126,7 +135,7 @@ app.use('/api/v1/users', userRoutes)
 app.use('/api/v1/business', businessRouter)
 
 // health
-app.get("/api/v1/health", (req, res) => res.json({ ok: true,message : "hello world 2" }));
+app.get("/api/v1/health", (req, res) => res.json({ ok: true, message: "hello world 2" }));
 
 // sample hello world
 app.get("/api/v1/hello", (req, res) => res.json({ message: "Hello, world!" }));
@@ -145,4 +154,4 @@ app.use("/api/v1/employees", employeeRouter);
 app.use("/api/v1", testRouter); // optional
 
 
-export {app}
+export { app }

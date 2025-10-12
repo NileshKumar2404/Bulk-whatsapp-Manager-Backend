@@ -1,137 +1,133 @@
-// controllers/customer.controllers.js
+import XLSX from "xlsx";
+import { parsePhoneNumberFromString } from "libphonenumber-js";
 import { Customer } from "../models/Customer.js";
 import { Business } from "../models/Business.js";
-import { Op } from 'sequelize';
+import { sendWATemplate, buildTemplateComponentsFromRow } from "./wa/wa.js";
+
+function toE164(phoneRaw, defaultCountry = "IN") {
+    if (!phoneRaw) return null;
+    const pn = parsePhoneNumberFromString(String(phoneRaw), defaultCountry);
+    return pn?.isValid() ? pn.number : null;
+}
 
 export const addCustomer = async (req, res) => {
-    const userId = req.user.id;
-    const { name, phoneE164, tags, consentAt, businessId } = req.body;
+    const userId = req.user._id;
+    const { name, businessId, phoneE164, tags, consentAt } = req.body;
 
     if (!phoneE164 || !/^\+\d{8,15}$/.test(phoneE164)) {
-        return res.status(400).json({ error: "phoneE164 must be in E.164 format like +91xxxxxxxxxx" });
+        return res.status(400).json({ error: "phoneE164 must be E.164 like +91xxxxxxxxxx" });
     }
     if (!businessId) return res.status(400).json({ error: "businessId is required" });
 
     try {
-        // Ensure the business belongs to this user
-        const business = await Business.findOne({ where: { id: businessId, ownerId: userId } });
-        if (!business) {
-            return res.status(404).json({ error: "Business not found or not yours" });
-        }
-
-        const [doc, created] = await Customer.findOrCreate({
-            where: { businessId, phoneE164, userId }, // include userId in uniqueness for safety
-            defaults: {
-                userId,
-                name: name || null,
-                tags: Array.isArray(tags) ? tags : [],
-                consentAt: consentAt ? new Date(consentAt) : new Date()
-            }
-        });
-
-        if (!created) {
-            doc.name = name ?? doc.name;
-            if (Array.isArray(tags)) doc.tags = tags;
-            if (consentAt) doc.consentAt = consentAt;
-            await doc.save();
-        }
-
-        // Re-fetch with include so UI gets business object on first paint
-        const withBusiness = await Customer.findByPk(doc.id, {
-            include: [{ model: Business, as: 'business', attributes: ['id', 'businessName', 'category'] }]
-        });
-
-        res.status(201).json(withBusiness);
+        const doc = await Customer.findOneAndUpdate(
+            { userId, businessId, phoneE164 },
+            { $set: { name, tags: tags || [], consentAt: consentAt || new Date() } },
+            { new: true, upsert: true }
+        );
+        res.status(201).json(doc);
     } catch (e) {
         res.status(400).json({ error: e.message });
     }
 };
 
 export const listCustomers = async (req, res) => {
-    const userId = req.user.id;
+    const userId = req.user._id;
     const { tag, businessId } = req.query;
-
-    try {
-        const where = { userId };
-
-        if (businessId) {
-            // Verify ownership
-            const biz = await Business.findOne({ where: { id: businessId, ownerId: userId } });
-            if (!biz) return res.status(404).json({ error: "Business not found or not yours" });
-            where.businessId = businessId;
-        }
-
-        if (tag) {
-            // Op.contains works on Postgres JSON/ARRAY. If you're on MySQL, adjust accordingly.
-            where.tags = { [Op.contains]: [tag] };
-        }
-
-        const rows = await Customer.findAll({
-            where,
-            include: [{ model: Business, as: 'business', attributes: ['id', 'businessName', 'category'] }],
-            order: [['createdAt', 'DESC']],
-            limit: 200
-        });
-
-        res.json(rows);
-    } catch (e) {
-        console.error('listCustomers error:', e);
-        res.status(500).json({ error: 'Failed to load customers' });
-    }
+    const q = { userId };
+    if (tag) q.tags = tag;
+    const docs = await Customer.find(q).sort({ createdAt: -1 }).limit(200);
+    res.json(docs);
 };
 
-export const updateCustomer = async (req, res) => {
-    const userId = req.user.id;
-    const customerId = req.params.id;
-    const { name, phoneE164, tags, businessId } = req.body;
-
-    // Allow partial updates: validate phone only if provided
-    if (phoneE164 && !/^\+\d{8,15}$/.test(phoneE164)) {
-        return res.status(400).json({ error: "phoneE164 must be in E.164 format like +91xxxxxxxxxx" });
-    }
-
+/**
+ * Upload CSV/XLSX:
+ *  Required form-data:
+ *   - file: File (key EXACTLY "file")
+ *   - businessId: ObjectId
+ *  Optional:
+ *   - defaultCountry: "IN"
+ *   - send: "true" | "false" (default "true")
+ *   - templateName: required if send=true
+ *   - templateLanguage: default "en_US"
+ *   - headerType: "none" | "text" | "media"
+ */
+export const importCustomers = async (req, res) => {
     try {
-        const customer = await Customer.findOne({
-            where: { id: customerId, userId },
-            include: [{ model: Business, as: 'business', attributes: ['id', 'businessName'] }]
-        });
-        if (!customer) return res.status(404).json({ error: "Customer not found" });
+        const userId = req.user._id;
+        const {
+            businessId,
+            defaultCountry = "IN",
+            send = "true",
+            templateName,
+            templateLanguage = "en_US",
+            headerType = "none",
+        } = req.body;
 
-        if (businessId && businessId !== customer.businessId) {
-            const biz = await Business.findOne({ where: { id: businessId, ownerId: userId } });
-            if (!biz) return res.status(404).json({ error: "Business not found or not yours" });
+        if (!businessId) return res.status(400).json({ ok: false, message: "businessId required" });
+        if (!req.file) return res.status(400).json({ ok: false, message: "file required (form-data key: file)" });
+
+        // Fetch business with token (select: false)
+        const biz = await Business.findById(businessId).select("+waAccessToken").lean();
+        if (!biz) return res.status(404).json({ ok: false, message: "business not found" });
+        if (!biz.waEnabled) return res.status(400).json({ ok: false, message: "WhatsApp not enabled for this business" });
+
+        // Parse sheet
+        const wb = XLSX.read(req.file.buffer, { type: "buffer" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
+
+        let imported = 0, skipped = 0;
+        const total = rows.length;
+        const results = [];
+
+        for (const row of rows) {
+            const entries = Object.fromEntries(Object.entries(row).map(([k, v]) => [String(k).trim(), v]));
+            const name = entries.name || entries.Name || entries.customer || entries.Customer || "";
+
+            const phoneRaw =
+                entries.phone || entries.Phone || entries.mobile || entries.Mobile ||
+                entries["phone no"] || entries["Phone No"] || entries["Phone Number"] || entries["phone number"];
+
+            const phoneE164 = toE164(phoneRaw, defaultCountry);
+            if (!phoneE164) {
+                skipped++;
+                results.push({ phoneRaw, status: "skipped", reason: "invalid phone" });
+                continue;
+            }
+
+            // Upsert contact
+            await Customer.updateOne(
+                { userId, businessId, phoneE164 },
+                { $set: { name: name || undefined, userId, businessId, consentAt: new Date() } },
+                { upsert: true }
+            );
+            imported++;
+
+            // Send message?
+            if (String(send) === "true" && templateName) {
+                try {
+                    const components = buildTemplateComponentsFromRow(entries, { headerType });
+                    const data = await sendWATemplate({
+                        phoneNumberId: biz.waPhoneNumberId || process.env.WA_PHONE_NUMBER_ID,
+                        accessToken: biz.waAccessToken || process.env.WHATSAPP_TOKEN,
+                        to: phoneE164,
+                        templateName,
+                        language: templateLanguage,
+                        components,
+                    });
+                    results.push({ phone: phoneE164, status: "sent", waId: data?.messages?.[0]?.id || null });
+                } catch (err) {
+                    results.push({ phone: phoneE164, status: "send_failed", error: err?.response?.data || err.message });
+                }
+            } else {
+                results.push({ phone: phoneE164, status: "imported_only" });
+            }
         }
 
-        await customer.update({
-            name: name ?? customer.name,
-            phoneE164: phoneE164 ?? customer.phoneE164,
-            tags: Array.isArray(tags) ? tags : customer.tags,
-            businessId: businessId ?? customer.businessId
-        });
-
-        const withBusiness = await Customer.findByPk(customer.id, {
-            include: [{ model: Business, as: 'business', attributes: ['id', 'businessName', 'category'] }]
-        });
-
-        res.json(withBusiness);
+        return res.json({ ok: true, total, imported, skipped, results });
     } catch (e) {
-        res.status(400).json({ error: e.message });
-    }
-};
-
-export const deleteCustomer = async (req, res) => {
-    const userId = req.user.id;
-    const customerId = req.params.id;
-
-    try {
-        const customer = await Customer.findOne({
-            where: { id: customerId, userId }
-        });
-        if (!customer) return res.status(404).json({ error: "Customer not found" });
-
-        await customer.destroy();
-        res.json({ message: "Customer deleted successfully" });
-    } catch (e) {
-        res.status(400).json({ error: e.message });
+        console.error("import error:", e?.response?.data || e);
+        res.status(500).json({ ok: false, message: e.message });
     }
 };
