@@ -1,8 +1,9 @@
-import { asyncHandler } from "../../utils/asyncHandler.js"
-import { ApiError } from "../../utils/ApiError.js"
-import { ApiResponse } from "../../utils/ApiResponse.js"
-import { User } from "../../models/User.js"
-import { Business } from "../../models/Business.js"
+// controllers/business.controller.js
+import { asyncHandler } from "../../utils/asyncHandler.js";
+import { ApiError } from "../../utils/ApiError.js";
+import { ApiResponse } from "../../utils/ApiResponse.js";
+import { User } from "../../models/User.js";
+import { Business } from "../../models/Business.js";
 
 function escapeRegex(s = "") {
     return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -10,139 +11,127 @@ function escapeRegex(s = "") {
 
 export const createBusiness = asyncHandler(async (req, res) => {
     try {
-        const {name, timezone, country, category, description} = req.body || {}
-
-        if (!name || !country || !category) return res .status(400).json(new ApiResponse(400, {}, "All these fields are required"));
-
+        const { businessName, country, category, description } = req.body || {};
+        if (!businessName || !country || !category) {
+            return res.status(400).json(new ApiResponse(400, {}, "businessName, country, category are required"));
+        }
         if (req.user.role !== "shop_owner") {
-            return res .status(403).json(new ApiResponse(403, {}, "Only shop owner can create businesses"))
+            return res.status(403).json(new ApiResponse(403, {}, "Only shop owner can create businesses"));
         }
 
-        const existing = await Business.findOne({ownerId: req.user._id})
+        const existing = await Business.findOne({ ownerId: req.user._id });
         if (existing) {
-            return res
-            .status(400)
-            .json(new ApiResponse(400, {}, "You already have a business"))
+            return res.status(400).json(new ApiResponse(400, {}, "You already have a business"));
         }
 
         const business = await Business.create({
-            name,
+            businessName,
             description,
-            timezone,
             country,
             category,
-            ownerId: req.user._id
-        })
+            ownerId: req.user._id,
+        });
 
-        return res
-        .status(201)
-        .json(new ApiResponse(
-            201,
-            {business},
-            "Business created successfully"
-        ))
+        return res.status(201).json(new ApiResponse(201, { business }, "Business created successfully"));
     } catch (error) {
         console.log("Error: ", error);
-        throw new ApiError(401, "Internal server error")
+        throw new ApiError(500, "Internal server error");
     }
-})
+});
 
 export const getMyBusiness = asyncHandler(async (req, res) => {
     try {
-        const business = await Business.find({ownerId: req.user._id})
-        if (!business) {
-            return res
-            .status(404)
-            .json(new ApiResponse(404, {}, "Business not found"))
+        const businesses = await Business.find({ ownerId: req.user._id });
+        if (!businesses || businesses.length === 0) {
+            return res.status(404).json(new ApiResponse(404, {}, "Business not found"));
         }
-        return res
-        .status(200)
-        .json(new ApiResponse(
-            200,
-            {business},
-            "Business found successfully"
-        ))
+        return res.status(200).json(new ApiResponse(200, { businesses }, "Business(es) found successfully"));
     } catch (error) {
         console.log("Error: ", error);
-        throw new ApiError(401, "Internal server error")
+        throw new ApiError(500, "Internal server error");
     }
-})
+});
 
 export const updateMyBusiness = asyncHandler(async (req, res) => {
     try {
-        const {businessId} = req.params
-        const {name, description, category} = req.body
+        const { businessId } = req.params;
+        const { businessName, description, category } = req.body;
 
-        const business = await Business.findById(businessId)
-        if (!business) {
-            return res
-            .status(404)
-            .json(new ApiResponse(404, {}, "Business not found"))
-        }
+        const business = await Business.findById(businessId);
+        if (!business) return res.status(404).json(new ApiResponse(404, {}, "Business not found"));
 
         if (req.user.role !== "shop_owner") {
-            return res .status(403).json(new ApiResponse(403, {}, "Only shop owner can update businesses"))
+            return res.status(403).json(new ApiResponse(403, {}, "Only shop owner can update businesses"));
+        }
+        if (String(req.user._id) !== String(business.ownerId)) {
+            return res.status(403).json(new ApiResponse(403, {}, "You are not allowed to update this business"));
         }
 
-        if (req.user._id !== business.ownerId) {
-            return res
-            .status(403)
-            .json(new ApiResponse(403, {}, "You are not allowed to update this business"))
-        }
+        if (businessName) business.businessName = businessName;
+        if (description) business.description = description;
+        if (category) business.category = category;
+        await business.save();
 
-        business.name = name || business.name
-        business.description = description || business.description
-        business.category = category || business.category
-        await business.save()
-
-        return res
-        .status(200)
-        .json(new ApiResponse(
-            200,
-            {business},
-            "Business updated successfully"
-        ))
+        return res.status(200).json(new ApiResponse(200, { business }, "Business updated successfully"));
     } catch (error) {
         console.log("Error: ", error);
-        throw new ApiError(401, "Internal server error")
+        throw new ApiError(500, "Internal server error");
     }
-})
+});
 
 export const deleteMyBusiness = asyncHandler(async (req, res) => {
     try {
-        const {businessId} = req.params
-    
-        const existing = await Business.findById(businessId)
-        if (!existing) {
-            return res
-            .status(404)
-            .json(new ApiResponse(404, {}, "Business not found"))
-        }
-    
+        const { businessId } = req.params;
+        const existing = await Business.findById(businessId);
+        if (!existing) return res.status(404).json(new ApiResponse(404, {}, "Business not found"));
         if (req.user.role !== "shop_owner") {
-            return res .status(403).json(new ApiResponse(403, {}, "Only shop owner can delete businesses"))
+            return res.status(403).json(new ApiResponse(403, {}, "Only shop owner can delete businesses"));
         }
-    
-        if (req.user._id !== existing.ownerId) {
-            return res
-            .status(403)
-            .json(new ApiResponse(403, {}, "You are not allowed to delete this business"))
+        if (String(req.user._id) !== String(existing.ownerId)) {
+            return res.status(403).json(new ApiResponse(403, {}, "You are not allowed to delete this business"));
         }
-    
-        await Business.findByIdAndDelete(businessId)
-    
-        return res
-        .status(200)
-        .json(new ApiResponse(
-            200,
-            {},
-            "Business deleted successfully"
-        ))
+        await Business.findByIdAndDelete(businessId);
+        return res.status(200).json(new ApiResponse(200, {}, "Business deleted successfully"));
     } catch (error) {
         console.log("Error: ", error);
-        throw new ApiError(401, "Internal server error")
+        throw new ApiError(500, "Internal server error");
     }
-})
+});
+
+// ------- NEW: enable/configure WhatsApp on a business (owner only)
+export const updateWAConfigMyBusiness = asyncHandler(async (req, res) => {
+    try {
+        const { businessId } = req.params;
+        const { waEnabled, waPhoneNumberId, waAccessToken, waDefaultLanguage } = req.body;
+
+        const business = await Business.findById(businessId).select("+waAccessToken");
+        if (!business) return res.status(404).json(new ApiResponse(404, {}, "Business not found"));
+
+        if (req.user.role !== "shop_owner") {
+            return res.status(403).json(new ApiResponse(403, {}, "Only shop owner can update WA config"));
+        }
+        if (String(req.user._id) !== String(business.ownerId)) {
+            return res.status(403).json(new ApiResponse(403, {}, "You are not allowed to update this business"));
+        }
+
+        if (typeof waEnabled === "boolean") business.waEnabled = waEnabled;
+        if (waPhoneNumberId !== undefined) business.waPhoneNumberId = String(waPhoneNumberId).trim();
+        if (waDefaultLanguage) business.waDefaultLanguage = String(waDefaultLanguage);
+        if (waAccessToken !== undefined) {
+            business.waAccessToken = String(waAccessToken).trim().replace(/^Bearer\s+/i, "");
+        }
+
+        await business.save();
+
+        return res
+            .status(200)
+            .json(new ApiResponse(200, { waEnabled: business.waEnabled }, "WhatsApp config updated"));
+    } catch (error) {
+        console.log("Error: ", error);
+        throw new ApiError(500, "Internal server error");
+    }
+});
+
 
 export const listBusinesses_admin = asyncHandler(async (req, res) => {
     try {

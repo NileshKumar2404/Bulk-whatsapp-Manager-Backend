@@ -20,17 +20,17 @@ app.use((req, res, next) => {
     next();
 });
 
-// app.use(express.urlencoded({extended: true}))
-// app.use(cookieParser())
-// app.use(express.json())
-// app.use(express.static('public'))
+app.use(express.urlencoded({extended: true}))
+app.use(cookieParser())
+app.use(express.json())
+app.use(express.static('public'))
 // app.use((req, res, next) => {
 //     console.log(`request body: ${req.body}`);
 //     next()
 // })
 
 import userRoutes from './routes/user.routes.js'
-import { waRouter } from './routes/wa.routes.js'
+import { waWebhookRouter } from './routes/wa.routes.js'
 import businessRouter from "./routes/business.routes.js"
 import { customerRouter } from './routes/customer.routes.js'
 import { templateRouter } from './routes/template.routes.js'
@@ -44,7 +44,7 @@ app.use('/api/v1/business', businessRouter)
 app.get("/api/v1/health", (req, res) => res.json({ ok: true }));
 
 // webhook (public)
-app.use("/api/v1", waRouter);
+app.use("/api/v1", waWebhookRouter);
 
 // protected business routes
 app.use("/api/v1/customers", customerRouter);
