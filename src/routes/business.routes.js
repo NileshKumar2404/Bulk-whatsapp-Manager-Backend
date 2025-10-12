@@ -4,6 +4,14 @@ import { createBusiness, deleteMyBusiness, getMyBusiness, listBusinesses_admin, 
 
 const router = express.Router()
 
+// Map :id to :businessId so controllers that read req.params.businessId work
+router.param('id', (req, _res, next, val) => {
+    // keep both, harmless if controller reads either one
+    req.params.id = val
+    if (!req.params.businessId) req.params.businessId = val
+    next()
+})
+
 // New CRUD routes for frontend
 router.route("/").get(verifyUser, getAllMyBusinesses)
 router.route("/").post(verifyUser, createBusiness)
