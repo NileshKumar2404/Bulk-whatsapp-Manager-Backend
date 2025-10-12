@@ -90,7 +90,8 @@
         try {
             const response = await apiCall('/users/register', {
                 method: 'POST',
-                body: JSON.stringify(formData)
+                body: JSON.stringify(formData),
+                skipAuth: true
             });
 
             const data = await response.json();
@@ -109,7 +110,8 @@
                 showAlert(data.message || 'Registration failed', 'danger');
             }
         } catch (error) {
-            showAlert('Network error. Please try again.', 'danger');
+            console.error('Registration error:', error);
+            showAlert('Network error. Please try again.', 'danger',$error);
         } finally {
             // Hide loading
             registerBtn.disabled = false;
