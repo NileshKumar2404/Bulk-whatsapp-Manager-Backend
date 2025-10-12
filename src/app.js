@@ -37,15 +37,6 @@ app.use((req, res, next) => {
     next();
 });
 
-app.use(express.urlencoded({extended: true}))
-app.use(cookieParser())
-app.use(express.json())
-app.use(express.static('public'))
-// app.use((req, res, next) => {
-//     console.log(`request body: ${req.body}`);
-//     next()
-// })
-
 import userRoutes from './routes/user.routes.js'
 import { waWebhookRouter } from './routes/wa.routes.js'
 import businessRouter from "./routes/business.routes.js"
@@ -55,8 +46,34 @@ import { campaignRouter } from './routes/campaign.routes.js'
 import { employeeRouter } from './routes/employee.routes.js'
 import { testRouter } from './routes/test.routes.js'
 
-// Frontend routes
+// Frontend routes - MUST come before static middleware
 app.get("/", (req, res) => res.redirect("/login"));
+
+// Clear storage route
+app.get("/clear-storage", (req, res) => {
+    res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Clearing Storage...</title>
+            <style>
+                body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+                .message { color: #28a745; font-size: 18px; }
+            </style>
+        </head>
+        <body>
+            <div class="message">Clearing localStorage and redirecting to login...</div>
+            <script>
+                localStorage.clear();
+                sessionStorage.clear();
+                setTimeout(() => {
+                    window.location.replace('/login');
+                }, 1000);
+            </script>
+        </body>
+        </html>
+    `);
+});
 app.get("/login", (req, res) => res.render("login", { title: "Login" }));
 app.get("/register", (req, res) => res.render("register", { title: "Register" }));
 app.get("/dashboard", verifyUser, (req, res) => {
@@ -94,6 +111,16 @@ app.get("/campaigns", verifyUser, (req, res) => {
     };
     res.render("campaigns", { title: "Campaigns", user });
 });
+app.get("/employees", verifyUser, (req, res) => {
+    const user = { 
+        firstName: req.user.firstName, 
+        lastName: req.user.lastName 
+    };
+    res.render("employees", { title: "Employee Management", user });
+});
+
+// Static files - serve after routes to avoid conflicts
+app.use(express.static("public"))
 
 app.use('/api/v1/users', userRoutes)
 app.use('/api/v1/business', businessRouter)

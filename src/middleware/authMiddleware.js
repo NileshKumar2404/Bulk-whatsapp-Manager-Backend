@@ -99,6 +99,20 @@ export const verifyOwner = asyncHandler(async (req, res, next) => {
         console.log("verify Owner")
         next()
     } catch (error) {
-        res.status(401).json({ message: 'Invalid access Token in auth.middleware.js ->', error: error.message });
+        console.log("Auth error:", error.message);
+        
+        // Check if this is a frontend request (HTML) or API request (JSON)
+        if (req.accepts('html')) {
+            // Clear the invalid token cookie
+            res.clearCookie('accessToken');
+            return res.redirect('/login');
+        } else {
+            // For API requests, return JSON error
+            res.status(401).json({ 
+                success: false,
+                message: 'Authentication failed', 
+                error: error.message 
+            });
+        }
     }
 });
