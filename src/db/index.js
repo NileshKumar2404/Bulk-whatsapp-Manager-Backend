@@ -22,11 +22,24 @@ const connectDB = async () => {
     // Import models to establish relationships
     await import('../models/index.js');
     
-    // Sync all models - use alter: true to update tables without losing data
-    await sequelize.sync({ alter: true });
-    console.log('Database synchronized successfully');
+    // Check if tables exist and sync accordingly
+    const [results] = await sequelize.query("SHOW TABLES");
+    const tableExists = results.length > 0;
+    
+    if (tableExists) {
+      console.log('Existing tables found. Skipping sync to avoid conflicts.');
+      console.log('If you need to update the database structure, please run: npm run reset-db');
+      // Skip sync entirely when tables exist to avoid conflicts
+    } else {
+      console.log('No existing tables found. Creating new tables.');
+      // Create new tables
+      await sequelize.sync({ force: false });
+      console.log('Database synchronized successfully');
+    }
+    
   } catch (error) {
     console.error('MySQL connection error:', error);
+    console.log('\nTo fix database structure issues, please run: npm run reset-db');
     process.exit(1);
   }
 };
