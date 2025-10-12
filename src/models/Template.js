@@ -1,17 +1,55 @@
-import mongoose, { Schema } from "mongoose";
+import { DataTypes } from 'sequelize';
+import { sequelize } from '../db/index.js';
 
-const templateSchema = new Schema(
+const Template = sequelize.define('Template', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
+  userId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'users',
+      key: 'id'
+    }
+  },
+  waName: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  language: {
+    type: DataTypes.STRING,
+    defaultValue: 'en_US'
+  },
+  category: {
+    type: DataTypes.ENUM('marketing', 'utility', 'authentication'),
+    allowNull: false
+  },
+  components: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: []
+  },
+  displayName: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  htmlContent: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    comment: 'Rich HTML content for the template'
+  }
+}, {
+  tableName: 'templates',
+  timestamps: true,
+  indexes: [
     {
-        userId: { type: Schema.Types.ObjectId, ref: "User", index: true, required: true },
-        waName: { type: String, required: true }, // exact template name in WhatsApp Manager
-        language: { type: String, default: "en_US" },
-        category: { type: String, enum: ["marketing", "utility", "authentication"], required: true },
-        components: { type: Array, default: [] }, // WhatsApp components payload (body/header/buttons vars)
-        displayName: { type: String }, // friendly label for dashboard
-    },
-    { timestamps: true }
-);
+      unique: true,
+      fields: ['userId', 'waName']
+    }
+  ]
+});
 
-templateSchema.index({ userId: 1, waName: 1 }, { unique: true });
-
-export const Template = mongoose.model("Template", templateSchema);
+export { Template };

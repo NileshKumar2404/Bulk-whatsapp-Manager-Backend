@@ -1,10 +1,10 @@
 {
   "name": "bulk-whatsapp-manager-backend",
   "version": "1.0.0",
-  "description": "This is a backend of bulk whatsapp messenger app",
+  "description": "This is a backend of bulk whatsapp messenger app using MySQL database",
   "keywords": [
     "Javascript",
-    "Mongodb",
+    "MySQL",
     "Node",
     "Express",
     "Bulk",
@@ -24,21 +24,23 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon -r dotenv/config --experimental-json-modules src/index.js",
-    "start": "node -r dotenv/config --experimental-json-modules src/index.js"
+    "start": "node -r dotenv/config --experimental-json-modules src/index.js",
+    "reset-db": "node -r dotenv/config --experimental-json-modules reset-database.js"
   },
   "dependencies": {
-    "agenda": "^5.0.0",
     "axios": "^1.12.2",
     "bcrypt": "^6.0.0",
-    "bcryptjs": "^3.0.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
+    "express-handlebars": "^8.0.3",
     "jsonwebtoken": "^9.0.2",
-    "mongodb": "^6.19.0",
-    "mongoose": "^8.18.2",
     "multer": "^2.0.2",
-    "nodemon": "^3.1.10"
+    "mysql2": "^3.15.2",
+    "nodemon": "^3.1.10",
+    "sequelize": "^6.37.7",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1"
   }
 }
