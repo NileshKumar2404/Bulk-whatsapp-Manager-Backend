@@ -61,7 +61,7 @@ export const updateMyBusiness = asyncHandler(async (req, res) => {
         if (!business) return res.status(404).json(new ApiResponse(404, {}, "Business not found"));
 
         if (req.user.role !== "shop_owner") {
-            return res.status(403).json(new ApiResponse(403, {}, "Only shop owner can update businesses"));
+            return res .status(403).json(new ApiResponse(403, {}, "Only shop owner can update businesses"))
         }
 
         if (req.user._id !== business.ownerId) {
@@ -70,7 +70,7 @@ export const updateMyBusiness = asyncHandler(async (req, res) => {
             .json(new ApiResponse(403, {}, "You are not allowed to update this business"))
         }
 
-<<<<<<< HEAD
+
         // console.log(`This is our business id ${typeof business.ownerId} and this is our logged in user id ${typeof req.user._id}`);
         
         if (req.user._id.toString() !== business.ownerId.toString()) {
@@ -78,14 +78,20 @@ export const updateMyBusiness = asyncHandler(async (req, res) => {
             .status(403)
             .json(new ApiResponse(403, {}, "You are not allowed to update this business"))
         }
-=======
-        if (businessName) business.businessName = businessName;
-        if (description) business.description = description;
-        if (category) business.category = category;
-        await business.save();
->>>>>>> 0f49cfc (Add business and customer management features with WhatsApp integration)
 
-        return res.status(200).json(new ApiResponse(200, { business }, "Business updated successfully"));
+        business.name = name || business.name
+        business.description = description || business.description
+        business.category = category || business.category
+        await business.save()
+
+
+        return res
+        .status(200)
+        .json(new ApiResponse(
+            200,
+            {business},
+            "Business updated successfully"
+        ))
     } catch (error) {
         console.log("Error: ", error);
         throw new ApiError(500, "Internal server error");
