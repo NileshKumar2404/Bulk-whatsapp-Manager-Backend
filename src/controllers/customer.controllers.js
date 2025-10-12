@@ -1,43 +1,47 @@
+// controllers/customer.controllers.js
 import { Customer } from "../models/Customer.js";
 import { Business } from "../models/Business.js";
 import { Op } from 'sequelize';
 
 export const addCustomer = async (req, res) => {
-    const userId = req.user.id; // from your auth middleware
+    const userId = req.user.id;
     const { name, phoneE164, tags, consentAt, businessId } = req.body;
 
     if (!phoneE164 || !/^\+\d{8,15}$/.test(phoneE164)) {
         return res.status(400).json({ error: "phoneE164 must be in E.164 format like +91xxxxxxxxxx" });
     }
-
-    if (!businessId) {
-        return res.status(400).json({ error: "businessId is required" });
-    }
+    if (!businessId) return res.status(400).json({ error: "businessId is required" });
 
     try {
-        // Verify that the business belongs to the user
-        const business = await Business.findOne({
-            where: { id: businessId, ownerId: userId }
-        });
-
+        // Ensure the business belongs to this user
+        const business = await Business.findOne({ where: { id: businessId, ownerId: userId } });
         if (!business) {
-            return res.status(404).json({ error: "Business not found or you don't have permission to add customers to this business" });
+            return res.status(404).json({ error: "Business not found or not yours" });
         }
 
         const [doc, created] = await Customer.findOrCreate({
-            where: { businessId, phoneE164 },
-            defaults: { userId, name, tags: tags || [], consentAt: consentAt || new Date() }
+            where: { businessId, phoneE164, userId }, // include userId in uniqueness for safety
+            defaults: {
+                userId,
+                name: name || null,
+                tags: Array.isArray(tags) ? tags : [],
+                consentAt: consentAt ? new Date(consentAt) : new Date()
+            }
         });
 
         if (!created) {
-            // Update existing customer
-            doc.name = name || doc.name;
-            doc.tags = tags || doc.tags;
-            doc.consentAt = consentAt || doc.consentAt;
+            doc.name = name ?? doc.name;
+            if (Array.isArray(tags)) doc.tags = tags;
+            if (consentAt) doc.consentAt = consentAt;
             await doc.save();
         }
 
-        res.status(201).json(doc);
+        // Re-fetch with include so UI gets business object on first paint
+        const withBusiness = await Customer.findByPk(doc.id, {
+            include: [{ model: Business, as: 'business', attributes: ['id', 'businessName', 'category'] }]
+        });
+
+        res.status(201).json(withBusiness);
     } catch (e) {
         res.status(400).json({ error: e.message });
     }
@@ -46,36 +50,34 @@ export const addCustomer = async (req, res) => {
 export const listCustomers = async (req, res) => {
     const userId = req.user.id;
     const { tag, businessId } = req.query;
-    
-    let q = { userId };
-    
-    // If businessId is provided, filter by business
-    if (businessId) {
-        // Verify that the business belongs to the user
-        const business = await Business.findOne({
-            where: { id: businessId, ownerId: userId }
-        });
-        
-        if (!business) {
-            return res.status(404).json({ error: "Business not found or you don't have permission to view customers for this business" });
+
+    try {
+        const where = { userId };
+
+        if (businessId) {
+            // Verify ownership
+            const biz = await Business.findOne({ where: { id: businessId, ownerId: userId } });
+            if (!biz) return res.status(404).json({ error: "Business not found or not yours" });
+            where.businessId = businessId;
         }
-        
-        q.businessId = businessId;
+
+        if (tag) {
+            // Op.contains works on Postgres JSON/ARRAY. If you're on MySQL, adjust accordingly.
+            where.tags = { [Op.contains]: [tag] };
+        }
+
+        const rows = await Customer.findAll({
+            where,
+            include: [{ model: Business, as: 'business', attributes: ['id', 'businessName', 'category'] }],
+            order: [['createdAt', 'DESC']],
+            limit: 200
+        });
+
+        res.json(rows);
+    } catch (e) {
+        console.error('listCustomers error:', e);
+        res.status(500).json({ error: 'Failed to load customers' });
     }
-    
-    if (tag) q.tags = { [Op.contains]: [tag] };
-    
-    const docs = await Customer.findAll({
-        where: q,
-        include: [{
-            model: Business,
-            as: 'business',
-            attributes: ['id', 'businessName', 'category']
-        }],
-        order: [['createdAt', 'DESC']],
-        limit: 200
-    });
-    res.json(docs);
 };
 
 export const updateCustomer = async (req, res) => {
@@ -83,43 +85,35 @@ export const updateCustomer = async (req, res) => {
     const customerId = req.params.id;
     const { name, phoneE164, tags, businessId } = req.body;
 
-    if (!phoneE164 || !/^\+\d{8,15}$/.test(phoneE164)) {
+    // Allow partial updates: validate phone only if provided
+    if (phoneE164 && !/^\+\d{8,15}$/.test(phoneE164)) {
         return res.status(400).json({ error: "phoneE164 must be in E.164 format like +91xxxxxxxxxx" });
     }
 
     try {
         const customer = await Customer.findOne({
             where: { id: customerId, userId },
-            include: [{
-                model: Business,
-                as: 'business',
-                attributes: ['id', 'businessName']
-            }]
+            include: [{ model: Business, as: 'business', attributes: ['id', 'businessName'] }]
         });
+        if (!customer) return res.status(404).json({ error: "Customer not found" });
 
-        if (!customer) {
-            return res.status(404).json({ error: "Customer not found" });
-        }
-
-        // If businessId is provided, verify the business belongs to the user
         if (businessId && businessId !== customer.businessId) {
-            const business = await Business.findOne({
-                where: { id: businessId, ownerId: userId }
-            });
-            
-            if (!business) {
-                return res.status(404).json({ error: "Business not found or you don't have permission to move customer to this business" });
-            }
+            const biz = await Business.findOne({ where: { id: businessId, ownerId: userId } });
+            if (!biz) return res.status(404).json({ error: "Business not found or not yours" });
         }
 
         await customer.update({
-            name: name || customer.name,
-            phoneE164: phoneE164,
-            tags: tags || customer.tags,
-            businessId: businessId || customer.businessId
+            name: name ?? customer.name,
+            phoneE164: phoneE164 ?? customer.phoneE164,
+            tags: Array.isArray(tags) ? tags : customer.tags,
+            businessId: businessId ?? customer.businessId
         });
 
-        res.json(customer);
+        const withBusiness = await Customer.findByPk(customer.id, {
+            include: [{ model: Business, as: 'business', attributes: ['id', 'businessName', 'category'] }]
+        });
+
+        res.json(withBusiness);
     } catch (e) {
         res.status(400).json({ error: e.message });
     }
@@ -131,17 +125,9 @@ export const deleteCustomer = async (req, res) => {
 
     try {
         const customer = await Customer.findOne({
-            where: { id: customerId, userId },
-            include: [{
-                model: Business,
-                as: 'business',
-                attributes: ['id', 'businessName']
-            }]
+            where: { id: customerId, userId }
         });
-
-        if (!customer) {
-            return res.status(404).json({ error: "Customer not found" });
-        }
+        if (!customer) return res.status(404).json({ error: "Customer not found" });
 
         await customer.destroy();
         res.json({ message: "Customer deleted successfully" });
