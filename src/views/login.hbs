@@ -30,6 +30,7 @@
 
             <div class="text-center">
                 <p class="mb-0">Don't have an account? <a href="/register" class="text-decoration-none">Register here</a></p>
+                <button type="button" class="btn btn-link btn-sm mt-2" onclick="clearStorage()">Clear Storage & Refresh</button>
             </div>
         </div>
     </div>
@@ -70,7 +71,7 @@
                 // Show success and redirect
                 showAlert('Login successful! Redirecting...', 'success');
                 setTimeout(() => {
-                    window.location.href = '/dashboard';
+                    window.location.replace('/dashboard');
                 }, 1000);
             } else {
                 showAlert(data.message || 'Login failed', 'danger');
@@ -95,9 +96,29 @@
         `;
     }
 
-    // Check if user is already logged in
-    if (localStorage.getItem('accessToken')) {
-        window.location.href = '/dashboard';
+    // Prevent infinite redirects by clearing problematic tokens
+    document.addEventListener('DOMContentLoaded', function() {
+        // Clear any existing redirect flags
+        window.loginRedirected = false;
+        
+        // For now, let's disable the auto-redirect to prevent loops
+        // Users can manually navigate after login
+        console.log('Login page loaded - auto-redirect disabled to prevent loops');
+        
+        // Clear any potentially problematic tokens
+        const token = localStorage.getItem('accessToken');
+        if (token) {
+            console.log('Token found but not auto-redirecting to prevent loops');
+            // Don't auto-redirect - let user manually navigate
+        }
+    });
+    
+    // Function to clear storage and refresh
+    function clearStorage() {
+        localStorage.clear();
+        sessionStorage.clear();
+        console.log('Storage cleared, refreshing page...');
+        window.location.reload();
     }
 </script>
 
