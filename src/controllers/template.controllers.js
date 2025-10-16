@@ -8,11 +8,20 @@ export const createTemplateAtMeta = async (req, res) => {
         if (!name || !category || !language) {
             return res.status(400).json({ ok: false, message: "name, category, language are required" });
         }
-        const data = await createMetaTemplate({ name, category, language, components });
+        const data = await createMetaTemplate({
+            name,
+            category: String(category).toLowerCase(),
+            language,
+            components: Array.isArray(components) ? components : []
+        });
         return res.status(201).json({ ok: true, meta: data });
     } catch (e) {
         const status = e.response?.status || 400;
-        return res.status(status).json({ ok: false, message: e.response?.data?.error?.message || e.message, details: e.response?.data });
+        return res.status(status).json({
+            ok: false,
+            message: e.response?.data?.error?.message || e.message,
+            details: e.response?.data
+        });
     }
 };
 
@@ -97,7 +106,7 @@ export const getAllTemplates = async (req, res) => {
 export const createTemplate = async (req, res) => {
     try {
         const { waName, language, category, displayName, components, htmlContent } = req.body;
-        
+
         if (!waName || !category) {
             return res.status(400).json({ error: "waName and category are required" });
         }

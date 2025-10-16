@@ -18,10 +18,11 @@
           </div>
           <div class="submenu show" id="whatsapp-submenu">
             <a class="nav-link" href="/dashboard"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <a class="nav-link" href="/business"><i class="fas fa-building"></i> Business</a>
             <a class="nav-link" href="/customers"><i class="fas fa-users"></i> Customers</a>
             <a class="nav-link active" href="/templates"><i class="fas fa-file-alt"></i> Templates</a>
             <a class="nav-link" href="/campaigns"><i class="fas fa-bullhorn"></i> Campaigns</a>
-            <a class="nav-link" href="/business"><i class="fas fa-building"></i> Business</a>
+            
           </div>
 
           <!-- HR Tools Menu -->
@@ -44,11 +45,23 @@
     <!-- Main Content -->
     <div class="col-md-9 col-lg-10">
       <div class="main-content p-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-          <h2>Message Templates</h2>
-          <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTemplateModal">
-            <i class="fas fa-plus me-2"></i>Add Template
-          </button>
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+          <h2 class="m-0">Message Templates</h2>
+
+          <!-- Source toggle + Add -->
+          <div class="d-flex gap-2 align-items-center">
+            <div class="btn-group" role="group" aria-label="Data source">
+              <input type="radio" class="btn-check" name="tplSource" id="srcMeta" autocomplete="off" checked />
+              <label class="btn btn-outline-primary" for="srcMeta" title="Load from Meta">Meta</label>
+
+              <input type="radio" class="btn-check" name="tplSource" id="srcLocal" autocomplete="off" />
+              <label class="btn btn-outline-secondary" for="srcLocal" title="Load from MySQL">Local</label>
+            </div>
+
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTemplateModal">
+              <i class="fas fa-plus me-2"></i>Add Template
+            </button>
+          </div>
         </div>
 
         <!-- Search and Filter -->
@@ -109,6 +122,7 @@
               <input type="text" class="form-control" id="templateDisplayName" name="displayName" placeholder="e.g., Welcome Message" />
             </div>
           </div>
+
           <div class="row">
             <div class="col-md-6 mb-3">
               <label for="templateCategory" class="form-label">Category *</label>
@@ -131,14 +145,54 @@
               </select>
             </div>
           </div>
+
+          <!-- META COMPONENTS BUILDER -->
+          <div class="border rounded p-3 mb-3">
+            <h6 class="mb-3">Meta Components</h6>
+
+            <div class="mb-3">
+              <label class="form-label">Header (optional)</label>
+              <select class="form-select mb-2" id="metaHeaderType">
+                <option value="">None</option>
+                <option value="TEXT">Text</option>
+              </select>
+              <input type="text" class="form-control" id="metaHeaderText" placeholder="Header text (e.g., {{1}} Sale!)" />
+              <small class="text-muted">Use placeholders like {{1}} if needed.</small>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Body *</label>
+              <textarea class="form-control" id="metaBodyText" rows="4"
+                        placeholder="e.g., Hi {{1}}, your order {{2}} is out for delivery."></textarea>
+              <small class="text-muted">WhatsApp requires fixed text with variables like {{1}}, {{2}}.</small>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Footer (optional)</label>
+              <input type="text" class="form-control" id="metaFooterText" placeholder="Footer text" />
+            </div>
+
+            <div class="mb-2 d-flex align-items-center justify-content-between">
+              <label class="form-label m-0">Buttons (optional)</label>
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addMetaButtonRow()">Add Button</button>
+            </div>
+            <div id="metaButtonsWrap"></div>
+            <small class="text-muted d-block">Supported: Quick Reply or URL buttons. For URL buttons, include the URL.</small>
+          </div>
+
+          <!-- Keep CKEditor (used only for LOCAL HTML templates) -->
           <div class="mb-3">
-            <label for="templateHtmlContent" class="form-label">Template HTML Content</label>
+            <label for="templateHtmlContent" class="form-label">Template HTML Content (Local only)</label>
             <div id="templateHtmlContent" style="min-height: 300px;"></div>
-            <small class="form-text text-muted">Create rich HTML content for your template</small>
+            <small class="form-text text-muted">This is ignored for Meta templates.</small>
           </div>
         </form>
       </div>
+
       <div class="modal-footer">
+        <small class="me-auto text-muted">
+          <strong>Tip:</strong> Use the "Meta" toggle at the top to decide where to create & load from.
+        </small>
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
         <button type="button" class="btn btn-primary" onclick="addTemplate()">Add Template</button>
       </div>
@@ -146,7 +200,7 @@
   </div>
 </div>
 
-<!-- Edit Template Modal -->
+<!-- Edit Template Modal (LOCAL only) -->
 <div class="modal fade" id="editTemplateModal" tabindex="-1">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
@@ -159,17 +213,17 @@
           <input type="hidden" id="editTemplateId" name="id" />
           <div class="row">
             <div class="col-md-6 mb-3">
-              <label for="editTemplateWaName" class="form-label">WhatsApp Template Name *</label>
+              <label class="form-label">WhatsApp Template Name *</label>
               <input type="text" class="form-control" id="editTemplateWaName" name="waName" required />
             </div>
             <div class="col-md-6 mb-3">
-              <label for="editTemplateDisplayName" class="form-label">Display Name</label>
+              <label class="form-label">Display Name</label>
               <input type="text" class="form-control" id="editTemplateDisplayName" name="displayName" />
             </div>
           </div>
           <div class="row">
             <div class="col-md-6 mb-3">
-              <label for="editTemplateCategory" class="form-label">Category *</label>
+              <label class="form-label">Category *</label>
               <select class="form-select" id="editTemplateCategory" name="category" required>
                 <option value="">Select Category</option>
                 <option value="marketing">Marketing</option>
@@ -178,7 +232,7 @@
               </select>
             </div>
             <div class="col-md-6 mb-3">
-              <label for="editTemplateLanguage" class="form-label">Language</label>
+              <label class="form-label">Language</label>
               <select class="form-select" id="editTemplateLanguage" name="language">
                 <option value="en_US">English (US)</option>
                 <option value="en_GB">English (UK)</option>
@@ -190,13 +244,14 @@
             </div>
           </div>
           <div class="mb-3">
-            <label for="editTemplateHtmlContent" class="form-label">Template HTML Content</label>
+            <label class="form-label">Template HTML Content</label>
             <div id="editTemplateHtmlContent" style="min-height: 300px;"></div>
-            <small class="form-text text-muted">Create rich HTML content for your template</small>
+            <small class="form-text text-muted">Local templates only.</small>
           </div>
         </form>
       </div>
       <div class="modal-footer">
+        <small class="me-auto text-muted">Meta templates cannot be edited here.</small>
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
         <button type="button" class="btn btn-primary" onclick="updateTemplate()">Update Template</button>
       </div>
@@ -204,7 +259,7 @@
   </div>
 </div>
 
-<!-- Delete Confirmation Modal -->
+<!-- Delete Confirmation Modal (LOCAL only) -->
 <div class="modal fade" id="deleteTemplateModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -227,25 +282,111 @@
   </div>
 </div>
 
+<!-- Template for Meta button rows -->
+<template id="tplMetaButtonRow">
+  <div class="row g-2 align-items-end mb-2 meta-button-row">
+    <div class="col-md-4">
+      <label class="form-label">Type</label>
+      <select class="form-select meta-btn-type">
+        <option value="QUICK_REPLY">Quick Reply</option>
+        <option value="URL">URL</option>
+      </select>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Text</label>
+      <input class="form-control meta-btn-text" placeholder="e.g., View" />
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">URL (if URL type)</label>
+      <input class="form-control meta-btn-url" placeholder="https://..." />
+    </div>
+    <div class="col-md-1">
+      <button type="button" class="btn btn-outline-danger w-100" onclick="removeMetaButtonRow(this)">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  </div>
+</template>
+
 <script>
   let templates = [];
   let currentDeleteId = null;
   let templateEditor = null;
   let editTemplateEditor = null;
+  let source = 'meta'; // 'meta' | 'local'
+
+  // ---------- helpers you already have ----------
+  // expects apiCall(url, {method, body}) -> JSON
+  // expects toggleMenu(id), logout() to exist or no-op
+
+  // ---------- init ----------
+  document.addEventListener('DOMContentLoaded', () => {
+    loadTemplates();
+    initializeCKEditor();
+
+    document.getElementById('searchInput').addEventListener('input', searchTemplates);
+
+    const metaRadio = document.getElementById('srcMeta');
+    const localRadio = document.getElementById('srcLocal');
+
+    metaRadio.addEventListener('change', () => {
+      source = 'meta';
+      clearFilters();
+      loadTemplates();
+    });
+    localRadio.addEventListener('change', () => {
+      source = 'local';
+      clearFilters();
+      loadTemplates();
+    });
+  });
 
   // ---------- data ----------
   async function loadTemplates() {
     try {
-      const data = await apiCall('/templates'); // already JSON
-      templates = Array.isArray(data)
-        ? data
-        : (data && (data.data || data.items || data.templates)) || [];
+      const grid = document.getElementById('templatesGrid');
+      grid.innerHTML = `
+        <div class="col-12 text-center py-4">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+        </div>`;
+
+      let data;
+      if (source === 'meta') {
+        // Use single page list (or swap to /templates/meta/all to fetch all pages)
+        const resp = await apiCall('/templates/meta');
+        const rows = (resp && (resp.data || resp.templates || resp.items)) || [];
+        templates = normalizeMetaTemplates(rows);
+      } else {
+        const resp = await apiCall('/templates');
+        templates = Array.isArray(resp) ? resp : ((resp && (resp.data || resp.items)) || []);
+      }
+
       displayTemplates(templates);
     } catch (error) {
       console.error('Error loading templates:', error);
       document.getElementById('templatesGrid').innerHTML =
         '<div class="col-12 text-center text-danger py-4">Error loading templates</div>';
     }
+  }
+
+  function normalizeMetaTemplates(rows) {
+    const arr = Array.isArray(rows) ? rows : (rows?.data || []);
+    return arr.map(r => ({
+      __meta: true,
+      id: r.id || r.name,
+      waName: r.name || r.waName || '—',
+      displayName: r.display_name || r.displayName || r.name || '—',
+      category: (r.category || '').toLowerCase(),
+      language: r.language || 'en_US',
+      status: r.status || r.approval_status || '—',
+      quality: r.quality_score || '—',
+      rejectionReason: r.rejection_reason || r.latest_rejection_reason || '',
+      _raw: r,
+      createdAt: r.last_updated_time || r.created_time || null,
+      htmlContent: '' // meta does not store HTML
+    }));
   }
 
   // ---------- UI ----------
@@ -257,19 +398,29 @@
       return;
     }
 
-    grid.innerHTML = list
-      .map((t) => {
-        const id = t.id ?? t._id;
-        const title = t.displayName || t.waName || 'Untitled';
-        const cat = t.category || '—';
-        const lang = t.language || 'en_US';
-        const created = t.createdAt ? new Date(t.createdAt).toLocaleDateString() : '—';
-        const preview =
-          t.htmlContent && typeof t.htmlContent === 'string'
-            ? t.htmlContent.substring(0, 200) + (t.htmlContent.length > 200 ? '…' : '')
-            : '<span class="text-muted">No HTML content</span>';
+    grid.innerHTML = list.map((t) => {
+      const id = t.id ?? t._id;
+      const title = t.displayName || t.waName || 'Untitled';
+      const cat = t.category || '—';
+      const lang = t.language || 'en_US';
+      const created = t.createdAt ? new Date(t.createdAt).toLocaleDateString() : '—';
 
-        return `
+      const isMeta = !!t.__meta;
+      const statusBadge = isMeta && t.status
+        ? `<span class="badge bg-${t.status === 'APPROVED' ? 'success' : (t.status === 'REJECTED' ? 'danger' : 'secondary')} ms-1">${t.status}</span>`
+        : '';
+
+      const qualityBadge = isMeta && t.quality
+        ? `<span class="badge bg-info ms-1">Quality: ${t.quality}</span>`
+        : '';
+
+      const preview = isMeta
+        ? `<span class="text-muted">Meta template (no HTML)</span>`
+        : (t.htmlContent && typeof t.htmlContent === 'string'
+            ? t.htmlContent.substring(0, 200) + (t.htmlContent.length > 200 ? '…' : '')
+            : '<span class="text-muted">No HTML content</span>');
+
+      return `
         <div class="col-md-6 col-lg-4 mb-4">
           <div class="card h-100">
             <div class="card-body">
@@ -280,21 +431,33 @@
                     <i class="fas fa-ellipsis-v"></i>
                   </button>
                   <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="#" onclick="editTemplate(${JSON.stringify(id)})">
-                      <i class="fas fa-edit me-2"></i>Edit</a></li>
-                    <li><a class="dropdown-item text-danger" href="#"
-                           onclick="deleteTemplate(${JSON.stringify(id)}, '${(title || '').replace(/'/g,"\\'")}', '${(cat || '').replace(/'/g,"\\'")}')">
-                      <i class="fas fa-trash me-2"></i>Delete</a></li>
+                    ${isMeta ? '' : `
+                      <li><a class="dropdown-item" href="#" onclick="editTemplate(${JSON.stringify(id)})">
+                        <i class="fas fa-edit me-2"></i>Edit</a></li>
+                      <li><a class="dropdown-item text-danger" href="#"
+                        onclick="deleteTemplate(${JSON.stringify(id)}, '${(title || '').replace(/'/g,"\\'")}', '${(cat || '').replace(/'/g,"\\'")}')">
+                        <i class="fas fa-trash me-2"></i>Delete</a></li>
+                    `}
                   </ul>
                 </div>
               </div>
+
               <div class="mb-2">
                 <span class="badge bg-primary">${cat}</span>
                 <span class="badge bg-secondary ms-1">${lang}</span>
+                ${statusBadge}
+                ${qualityBadge}
               </div>
-              <p class="card-text"><strong>WhatsApp Name:</strong> ${t.waName || '—'}</p>
+
+              <p class="card-text"><strong>${isMeta ? 'Meta Name' : 'WhatsApp Name'}:</strong> ${t.waName || '—'}</p>
+
+              ${t.rejectionReason ? `
+                <div class="alert alert-warning py-2">
+                  <strong>Rejection:</strong> ${t.rejectionReason}
+                </div>` : ''}
+
               <div class="mb-3">
-                <strong>HTML Content Preview:</strong>
+                <strong>${isMeta ? 'Preview' : 'HTML Content Preview'}:</strong>
                 <div class="mt-2 border rounded p-2" style="max-height:150px;overflow-y:auto;background:#f8f9fa;">
                   ${preview}
                 </div>
@@ -305,8 +468,7 @@
             </div>
           </div>
         </div>`;
-      })
-      .join('');
+    }).join('');
   }
 
   function searchTemplates() {
@@ -346,47 +508,88 @@
   async function addTemplate() {
     const form = document.getElementById('addTemplateForm');
     const fd = new FormData(form);
+
+    const waName = fd.get('waName');
+    const displayName = fd.get('displayName');
+    const category = fd.get('category');
+    const language = fd.get('language') || 'en_US';
     const htmlContent = templateEditor ? templateEditor.getData() : '';
 
-    const payload = {
-      waName: fd.get('waName'),
-      displayName: fd.get('displayName'),
-      category: fd.get('category'),
-      language: fd.get('language'),
-      components: [],
-      htmlContent,
-    };
+    if (!waName || !category) {
+      showAlert('Please fill required fields.', 'warning');
+      return;
+    }
 
-    try {
-      const data = await apiCall('/templates', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      }); // JSON already
-
-      if (data && !data.error) {
-        // close & reset
-        bootstrap.Modal.getInstance(document.getElementById('addTemplateModal'))?.hide();
-        form.reset();
-        if (templateEditor) templateEditor.setData('');
-
-        // optimistic add
-        const created =
-          (data.template || data.data || data) && typeof (data.template || data.data || data) === 'object'
-            ? (data.template || data.data || data)
-            : { id: Date.now(), ...payload };
-        if (!created.createdAt) created.createdAt = new Date().toISOString();
-
-        templates = [created, ...templates];
-        displayTemplates(templates);
-        showAlert('Template added successfully!', 'success');
-
-        // background refresh
-        loadTemplates();
-      } else {
-        showAlert((data && (data.message || data.error)) || 'Failed to add template', 'danger');
+    if (source === 'meta') {
+      // Build Meta payload
+      const components = buildMetaComponentsFromForm();
+      if (!components.find(c => c.type === 'BODY')) {
+        showAlert('BODY text is required for Meta templates.', 'warning');
+        return;
       }
-    } catch (error) {
-      showAlert('Network error. Please try again.', 'danger');
+
+      const payload = {
+        name: waName, // Meta requires "name"
+        category: category.toLowerCase(),
+        language,
+        components
+      };
+
+      try {
+        const data = await apiCall('/templates/meta', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+
+        if (data && data.ok) {
+          bootstrap.Modal.getInstance(document.getElementById('addTemplateModal'))?.hide();
+          form.reset();
+          if (templateEditor) templateEditor.setData('');
+          document.getElementById('metaButtonsWrap').innerHTML = '';
+          showAlert('Meta template submitted! Check status (APPROVED/PENDING).', 'success');
+
+          await loadTemplates(); // refresh meta list
+        } else {
+          showAlert((data && (data.message || data.error)) || 'Failed to create Meta template', 'danger');
+        }
+      } catch (err) {
+        showAlert('Network error while creating Meta template.', 'danger');
+      }
+
+    } else {
+      // LOCAL (your existing flow)
+      const payload = {
+        waName,
+        displayName,
+        category,
+        language,
+        components: [],
+        htmlContent
+      };
+
+      try {
+        const data = await apiCall('/templates', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+
+        if (data && !data.error) {
+          bootstrap.Modal.getInstance(document.getElementById('addTemplateModal'))?.hide();
+          form.reset();
+          if (templateEditor) templateEditor.setData('');
+
+          const created = data.template || data.data || data;
+          if (!created.createdAt) created.createdAt = new Date().toISOString();
+          templates = [created, ...templates];
+          displayTemplates(templates);
+          showAlert('Template added locally.', 'success');
+          loadTemplates();
+        } else {
+          showAlert((data && (data.message || data.error)) || 'Failed to add template', 'danger');
+        }
+      } catch (error) {
+        showAlert('Network error. Please try again.', 'danger');
+      }
     }
   }
 
@@ -394,6 +597,7 @@
     const t = (templates || []).find((x) => String(x.id ?? x._id) === String(templateId));
     if (!t) return;
 
+    // LOCAL only
     document.getElementById('editTemplateId').value = t.id ?? t._id;
     document.getElementById('editTemplateWaName').value = t.waName || '';
     document.getElementById('editTemplateDisplayName').value = t.displayName || '';
@@ -416,7 +620,7 @@
       category: fd.get('category'),
       language: fd.get('language'),
       components: [],
-      htmlContent,
+      htmlContent
     };
 
     try {
@@ -427,7 +631,7 @@
 
       if (data && !data.error) {
         bootstrap.Modal.getInstance(document.getElementById('editTemplateModal'))?.hide();
-        // optimistic replace
+
         templates = (templates || []).map((t) =>
           String(t.id ?? t._id) === String(id) ? { ...(t || {}), ...payload } : t
         );
@@ -455,7 +659,6 @@
       const data = await apiCall(`/templates/${currentDeleteId}`, { method: 'DELETE' });
 
       if (data === undefined || (data && !data.error)) {
-        // optimistic remove
         templates = (templates || []).filter(
           (t) => String(t.id ?? t._id) !== String(currentDeleteId)
         );
@@ -523,10 +726,67 @@
     }
   }
 
-  // init
-  document.addEventListener('DOMContentLoaded', () => {
-    loadTemplates();
-    initializeCKEditor();
-  });
-  document.getElementById('searchInput').addEventListener('input', searchTemplates);
+  // ---------- Meta buttons helpers ----------
+  function addMetaButtonRow() {
+    const tpl = document.getElementById('tplMetaButtonRow');
+    const clone = tpl.content.cloneNode(true);
+    document.getElementById('metaButtonsWrap').appendChild(clone);
+  }
+  function removeMetaButtonRow(btn) {
+    const row = btn.closest('.meta-button-row');
+    if (row) row.remove();
+  }
+  function buildMetaComponentsFromForm() {
+    const headerType = (document.getElementById('metaHeaderType')?.value || '').trim();
+    const headerText = (document.getElementById('metaHeaderText')?.value || '').trim();
+    const bodyText   = (document.getElementById('metaBodyText')?.value || '').trim();
+    const footerText = (document.getElementById('metaFooterText')?.value || '').trim();
+
+    const comps = [];
+
+    if (headerType) {
+      if (headerType === 'TEXT' && headerText) {
+        comps.push({
+          type: 'HEADER',
+          format: 'TEXT',
+          text: headerText
+        });
+      }
+    }
+
+    if (bodyText) {
+      comps.push({
+        type: 'BODY',
+        text: bodyText
+      });
+    }
+
+    if (footerText) {
+      comps.push({
+        type: 'FOOTER',
+        text: footerText
+      });
+    }
+
+    const btnRows = document.querySelectorAll('#metaButtonsWrap .meta-button-row');
+    if (btnRows.length) {
+      const buttons = [];
+      btnRows.forEach(row => {
+        const type = row.querySelector('.meta-btn-type')?.value || 'QUICK_REPLY';
+        const text = (row.querySelector('.meta-btn-text')?.value || '').trim();
+        const url  = (row.querySelector('.meta-btn-url')?.value || '').trim();
+        if (!text) return;
+
+        if (type === 'QUICK_REPLY') {
+          buttons.push({ type: 'QUICK_REPLY', text });
+        } else if (type === 'URL') {
+          if (!url) return;
+          buttons.push({ type: 'URL', text, url });
+        }
+      });
+      if (buttons.length) comps.push({ type: 'BUTTONS', buttons });
+    }
+
+    return comps;
+  }
 </script>

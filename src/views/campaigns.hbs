@@ -1,4 +1,4 @@
-<!-- Campaigns.hbs (fixed) -->
+<!-- Campaigns.hbs (Meta templates enabled) -->
 <div class="container-fluid">
   <div class="row">
     <!-- Sidebar -->
@@ -18,10 +18,10 @@
           </div>
           <div class="submenu show" id="whatsapp-submenu">
             <a class="nav-link" href="/dashboard"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <a class="nav-link" href="/business"><i class="fas fa-building"></i> Business</a>
             <a class="nav-link" href="/customers"><i class="fas fa-users"></i> Customers</a>
             <a class="nav-link" href="/templates"><i class="fas fa-file-alt"></i> Templates</a>
             <a class="nav-link active" href="/campaigns"><i class="fas fa-bullhorn"></i> Campaigns</a>
-            <a class="nav-link" href="/business"><i class="fas fa-building"></i> Business</a>
           </div>
 
           <div class="menu-toggle" onclick="toggleMenu('hr-submenu')">
@@ -139,11 +139,13 @@
             </div>
           </div>
 
+          <!-- META templates only -->
           <div class="mb-3">
-            <label for="campaignTemplate" class="form-label">Template *</label>
-            <select class="form-select" id="campaignTemplate" required>
-              <option value="">Select Template</option>
+            <label for="campaignTemplate" class="form-label">Template (Meta) *</label>
+            <select class="form-select" id="campaignTemplate" required title="Loaded from Meta">
+              <option value="">Select Template from Meta</option>
             </select>
+            <small class="text-muted">Templates are fetched from your Meta account (Graph API).</small>
           </div>
 
           <div class="mb-3">
@@ -212,10 +214,11 @@
             </div>
           </div>
 
+          <!-- Edit also picks from Meta -->
           <div class="mb-3">
-            <label for="editCampaignTemplate" class="form-label">Template *</label>
+            <label for="editCampaignTemplate" class="form-label">Template (Meta) *</label>
             <select class="form-select" id="editCampaignTemplate" required>
-              <option value="">Select Template</option>
+              <option value="">Select Template from Meta</option>
             </select>
           </div>
 
@@ -278,38 +281,42 @@
   // ---- state ----
   let campaigns = [];
   let businesses = [];
-  let templates = [];
-  let customers = []; // last fetched set for the selected business
+  let metaTemplates = [];
+  let customers = [];
 
   // ---- helpers ----
   const getId = (obj) => (obj ? (obj.id ?? obj._id) : undefined);
   const coerceId = (v) => (typeof v === 'string' && /^\d+$/.test(v) ? Number(v) : v);
 
-  // Accept either parsed JSON or a fetch Response
-  async function unwrap(dataOrResp) {
-    if (!dataOrResp) return null;
-    if (typeof dataOrResp.ok === 'boolean' && typeof dataOrResp.json === 'function') {
-      if (!dataOrResp.ok) {
-        let txt = '';
-        try { txt = await dataOrResp.text(); } catch {}
-        throw new Error(txt || 'Request failed');
-      }
-      return dataOrResp.json();
+  async function unwrap(respOrJson) {
+    if (!respOrJson) return null;
+    if (typeof respOrJson.ok === 'boolean' && typeof respOrJson.json === 'function') {
+      if (!respOrJson.ok) throw new Error(await respOrJson.text());
+      return respOrJson.json();
     }
-    return dataOrResp;
+    return respOrJson;
   }
 
   function getBusinessName(businessId) {
     const b = (businesses || []).find((x) => String(getId(x)) === String(businessId));
     return b ? (b.businessName || 'Business') : 'Unknown';
   }
-  function getTemplateName(templateId) {
-    const t = (templates || []).find((x) => String(getId(x)) === String(templateId));
-    return t ? (t.displayName || t.waName || 'Template') : 'Unknown';
-  }
+
   function getStatusColor(status) {
     const c = { draft:'secondary', scheduled:'warning', running:'primary', completed:'success', paused:'danger' };
     return c[status] || 'secondary';
+  }
+
+  // display name of template for a campaign row
+  function getCampaignTemplateDisplay(c) {
+    if (c.metaTemplateName) {
+      return `${c.metaTemplateName} (${c.metaTemplateLanguage || 'en_US'})`;
+    }
+    // local fallback (shouldn’t happen now, but safe)
+    if (c.template && (c.template.displayName || c.template.waName)) {
+      return `${c.template.displayName || c.template.waName} (${c.template.category || '—'})`;
+    }
+    return '—';
   }
 
   // ---- data loading ----
@@ -330,26 +337,31 @@
     } catch (e) { console.error('loadBusinesses', e); }
   }
 
-  async function loadTemplates() {
+  // Load from Meta (NOT local)
+  async function loadMetaTemplates() {
     try {
-      templates = await unwrap(await apiCall('/templates')) || [];
-      populateTemplateDropdowns();
-    } catch (e) { console.error('loadTemplates', e); }
+      const resp = await unwrap(await apiCall('/templates/meta'));
+      const rows = (resp && (resp.data || resp.templates || resp.items)) || [];
+      metaTemplates = normalizeMetaTemplates(rows);
+      populateMetaTemplateDropdowns();
+    } catch (e) {
+      console.error('loadMetaTemplates', e);
+      metaTemplates = [];
+      populateMetaTemplateDropdowns();
+    }
   }
 
-  async function loadCustomersForBusiness(businessId, containerId) {
-    const container = document.getElementById(containerId);
-    if (!businessId) {
-      container.innerHTML = '<p class="text-muted">Please select a business first</p>';
-      return;
-    }
-    try {
-      customers = await unwrap(await apiCall(`/customers?businessId=${businessId}`)) || [];
-      displayCustomersForSelection(customers, containerId);
-    } catch (e) {
-      console.error('loadCustomersForBusiness', e);
-      container.innerHTML = '<p class="text-muted">Error loading customers</p>';
-    }
+  function normalizeMetaTemplates(rows) {
+    const arr = Array.isArray(rows) ? rows : (rows?.data || []);
+    // You can filter ONLY APPROVED templates if you want:
+    // return arr.filter(r => (r.status || r.approval_status) === 'APPROVED').map(...)
+    return arr.map(r => ({
+      id: r.id || r.name,
+      name: r.name,
+      language: r.language || 'en_US',
+      category: (r.category || '').toLowerCase(),
+      status: r.status || r.approval_status || '—',
+    }));
   }
 
   // ---- UI population ----
@@ -367,17 +379,35 @@
     });
   }
 
-  function populateTemplateDropdowns() {
+  function populateMetaTemplateDropdowns() {
     const ids = ['campaignTemplate', 'editCampaignTemplate'];
-    ids.forEach((id) => {
+    const opts = (metaTemplates || []).map(t => {
+      // pack the needed meta info in data-attrs
+      return `<option value="${t.name}" data-lang="${t.language}" data-cat="${t.category}">
+        ${t.name} (${t.language}) ${t.status ? '- ' + t.status : ''}
+      </option>`;
+    }).join('');
+
+    ids.forEach(id => {
       const sel = document.getElementById(id);
       if (!sel) return;
-      sel.innerHTML =
-        '<option value="">Select Template</option>' +
-        (templates || [])
-          .map(t => `<option value="${getId(t)}">${(t.displayName || t.waName || 'Untitled')} (${t.category || '—'})</option>`)
-          .join('');
+      sel.innerHTML = '<option value="">Select Template from Meta</option>' + opts;
     });
+  }
+
+  async function loadCustomersForBusiness(businessId, containerId) {
+    const container = document.getElementById(containerId);
+    if (!businessId) {
+      container.innerHTML = '<p class="text-muted">Please select a business first</p>';
+      return;
+    }
+    try {
+      customers = await unwrap(await apiCall(`/customers?businessId=${businessId}`)) || [];
+      displayCustomersForSelection(customers, containerId);
+    } catch (e) {
+      console.error('loadCustomersForBusiness', e);
+      container.innerHTML = '<p class="text-muted">Error loading customers</p>';
+    }
   }
 
   function displayCustomersForSelection(list, containerId) {
@@ -411,7 +441,7 @@
         <tr>
           <td><div><strong>${c.name || 'Untitled'}</strong>${c.description ? `<br><small class="text-muted">${c.description}</small>` : ''}</div></td>
           <td>${getBusinessName(c.businessId)}</td>
-          <td>${getTemplateName(c.templateId)}</td>
+          <td>${getCampaignTemplateDisplay(c)}</td>
           <td><span class="badge bg-info">${c.recipientCount || 0} recipients</span></td>
           <td><span class="badge bg-${getStatusColor(c.status)}">${c.status || 'draft'}</span></td>
           <td>${c.scheduledAt ? new Date(c.scheduledAt).toLocaleString() : 'Immediate'}</td>
@@ -456,6 +486,17 @@
     ).map(cb => coerceId(cb.value));
   }
 
+  function readSelectedMetaTemplate(selectId) {
+    const sel = document.getElementById(selectId);
+    const opt = sel?.selectedOptions?.[0];
+    if (!opt || !opt.value) return null;
+    return {
+      name: opt.value,
+      language: opt.dataset.lang || 'en_US',
+      category: (opt.dataset.cat || '').toLowerCase()
+    };
+  }
+
   // ---- create / send ----
   async function createCampaign() {
     const form = document.getElementById('createCampaignForm');
@@ -464,21 +505,23 @@
     const selected = collectSelected('customersList', 'selectAllCustomers');
     if (selected.length === 0) { alert('Please select at least one customer'); return; }
 
+    const metaTemplate = readSelectedMetaTemplate('campaignTemplate');
+    if (!metaTemplate) { alert('Please select a Meta template'); return; }
+
     const payload = {
       name: document.getElementById('campaignName').value,
       businessId: coerceId(document.getElementById('campaignBusiness').value),
-      templateId: coerceId(document.getElementById('campaignTemplate').value),
       customerIds: selected,
       scheduleType: document.getElementById('scheduleType').value,
       scheduledAt: document.getElementById('scheduleType').value === 'scheduled'
         ? new Date(document.getElementById('scheduleDateTime').value).toISOString()
         : null,
-      description: document.getElementById('campaignDescription').value
+      description: document.getElementById('campaignDescription').value,
+      metaTemplate // <-- send meta template info
     };
 
     try {
-      const data = await unwrap(await apiCall('/campaigns', { method: 'POST', body: JSON.stringify(payload) }));
-      const created = data?.campaign || data;
+      const created = await unwrap(await apiCall('/campaigns', { method: 'POST', body: JSON.stringify(payload) }));
       campaigns = [created, ...campaigns];
       displayCampaigns(campaigns);
       bootstrap.Modal.getInstance(document.getElementById('createCampaignModal'))?.hide();
@@ -497,20 +540,23 @@
     if (selected.length === 0) { alert('Please select at least one customer'); return; }
     if (!confirm('Send this campaign to all selected customers now?')) return;
 
+    const metaTemplate = readSelectedMetaTemplate('campaignTemplate');
+    if (!metaTemplate) { alert('Please select a Meta template'); return; }
+
     const payload = {
       name: document.getElementById('campaignName').value,
       businessId: coerceId(document.getElementById('campaignBusiness').value),
-      templateId: coerceId(document.getElementById('campaignTemplate').value),
       customerIds: selected,
       scheduleType: 'immediate',
-      description: document.getElementById('campaignDescription').value
+      description: document.getElementById('campaignDescription').value,
+      metaTemplate
     };
 
     try {
       const created = await unwrap(await apiCall('/campaigns', { method: 'POST', body: JSON.stringify(payload) }));
-      const id = getId(created?.campaign || created);
+      const id = getId(created);
       const result = await unwrap(await apiCall(`/campaigns/${id}/send`, { method: 'POST' }));
-      campaigns = [created?.campaign || created, ...campaigns];
+      campaigns = [created, ...campaigns];
       displayCampaigns(campaigns);
       bootstrap.Modal.getInstance(document.getElementById('createCampaignModal'))?.hide();
       form.reset();
@@ -539,11 +585,11 @@
           <p><strong>Description:</strong> ${c.description || 'N/A'}</p>
           <p><strong>Status:</strong> <span class="badge bg-${getStatusColor(c.status)}">${c.status}</span></p>
           <p><strong>Business:</strong> ${getBusinessName(c.businessId)}</p>
-          <p><strong>Template:</strong> ${getTemplateName(c.templateId)}</p>
+          <p><strong>Template:</strong> ${getCampaignTemplateDisplay(c)}</p>
         </div>
         <div class="col-md-6">
           <h6>Schedule Information</h6>
-          <p><strong>Schedule Type:</strong> ${c.scheduleType || 'Immediate'}</p>
+          <p><strong>Schedule Type:</strong> ${c.scheduleType || (c.scheduledAt ? 'scheduled' : 'immediate')}</p>
           <p><strong>Scheduled At:</strong> ${c.scheduledAt ? new Date(c.scheduledAt).toLocaleString() : 'Immediate'}</p>
           <p><strong>Created:</strong> ${c.createdAt ? new Date(c.createdAt).toLocaleString() : '—'}</p>
           <p><strong>Recipients:</strong> ${c.recipientCount || 0}</p>
@@ -564,9 +610,20 @@
     document.getElementById('editCampaignId').value = id;
     document.getElementById('editCampaignName').value = c.name || '';
     document.getElementById('editCampaignBusiness').value = c.businessId || '';
-    document.getElementById('editCampaignTemplate').value = c.templateId || '';
     document.getElementById('editCampaignDescription').value = c.description || '';
 
+    // Set Meta template selection
+    const sel = document.getElementById('editCampaignTemplate');
+    if (c.metaTemplateName) {
+      // find option by name + language (best effort)
+      const opt = Array.from(sel.options).find(o => o.value === c.metaTemplateName && (o.dataset.lang || '') === (c.metaTemplateLanguage || 'en_US'));
+      if (opt) sel.value = opt.value; // value is the name; language is in data-lang
+    } else if (c.template) {
+      // Backward compat: show local template in label only
+      // (No local option shown in list; prefer Meta only)
+    }
+
+    // Schedule
     if (c.scheduledAt) {
       document.getElementById('editScheduleType').value = 'scheduled';
       document.getElementById('editScheduleDateTime').value = new Date(c.scheduledAt).toISOString().slice(0, 16);
@@ -575,6 +632,7 @@
       document.getElementById('editScheduleType').value = 'immediate';
       document.getElementById('editScheduleDateTimeGroup').style.display = 'none';
     }
+
     loadCustomersForBusiness(c.businessId, 'editCustomersList');
   }
 
@@ -586,20 +644,24 @@
     if (selected.length === 0) { alert('Please select at least one customer'); return; }
 
     const id = document.getElementById('editCampaignId').value;
+    const metaTemplate = readSelectedMetaTemplate('editCampaignTemplate');
+    if (!metaTemplate) { alert('Please select a Meta template'); return; }
+
     const payload = {
       name: document.getElementById('editCampaignName').value,
       businessId: coerceId(document.getElementById('editCampaignBusiness').value),
-      templateId: coerceId(document.getElementById('editCampaignTemplate').value),
       customerIds: selected,
       scheduleType: document.getElementById('editScheduleType').value,
       scheduledAt: document.getElementById('editScheduleType').value === 'scheduled'
-        ? new Date(document.getElementById('editScheduleDateTime').value).toISOString() : null,
-      description: document.getElementById('editCampaignDescription').value
+        ? new Date(document.getElementById('editScheduleDateTime').value).toISOString()
+        : null,
+      description: document.getElementById('editCampaignDescription').value,
+      metaTemplate
     };
 
     try {
       const data = await unwrap(await apiCall(`/campaigns/${id}`, { method: 'PUT', body: JSON.stringify(payload) }));
-      campaigns = (campaigns || []).map(c => String(getId(c)) === String(id) ? (data?.campaign || data) : c);
+      campaigns = (campaigns || []).map(c => String(getId(c)) === String(id) ? data : c);
       displayCampaigns(campaigns);
       bootstrap.Modal.getInstance(document.getElementById('editCampaignModal'))?.hide();
       alert('Campaign updated successfully!');
@@ -640,7 +702,6 @@
     document.getElementById('statusFilter').addEventListener('change', filterCampaigns);
     document.getElementById('businessFilter').addEventListener('change', filterCampaigns);
 
-    // When business changes, fetch customers for that business
     document.getElementById('campaignBusiness').addEventListener('change', function () {
       document.getElementById('selectAllCustomers').checked = false;
       loadCustomersForBusiness(this.value, 'customersList');
@@ -650,7 +711,6 @@
       loadCustomersForBusiness(this.value, 'editCustomersList');
     });
 
-    // Show/hide schedule datetime fields
     document.getElementById('scheduleType').addEventListener('change', function () {
       const g = document.getElementById('scheduleDateTimeGroup');
       if (this.value === 'scheduled') { g.style.display = 'block'; document.getElementById('scheduleDateTime').required = true; }
@@ -662,7 +722,6 @@
       else { g.style.display = 'none'; document.getElementById('editScheduleDateTime').required = false; }
     });
 
-    // Select-all logic (kept simple so individual checkboxes remain clickable)
     document.getElementById('selectAllCustomers').addEventListener('change', function () {
       document.querySelectorAll('#customersList input[type="checkbox"]').forEach(cb => cb.checked = this.checked);
     });
@@ -670,7 +729,6 @@
       document.querySelectorAll('#editCustomersList input[type="checkbox"]').forEach(cb => cb.checked = this.checked);
     });
 
-    // When the create modal opens and a business is already selected, load its customers
     document.getElementById('createCampaignModal').addEventListener('shown.bs.modal', () => {
       const val = document.getElementById('campaignBusiness').value;
       if (val) loadCustomersForBusiness(val, 'customersList');
@@ -685,7 +743,7 @@
   document.addEventListener('DOMContentLoaded', function () {
     loadCampaigns();
     loadBusinesses();
-    loadTemplates();
+    loadMetaTemplates();  // <- Meta templates!
     setupEventListeners();
   });
 </script>
