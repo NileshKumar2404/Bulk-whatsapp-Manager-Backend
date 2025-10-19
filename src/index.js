@@ -2,9 +2,15 @@ import connectDB from "./db/index.js"
 import dotenv from 'dotenv'
 import {app} from "./app.js"
 
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 dotenv.config({
-    path: "./.env"
-})
+    path: path.join(__dirname, "../property.env") // project-root/property.env
+});
 
 connectDB()
 .then(() => {
