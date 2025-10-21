@@ -12,7 +12,7 @@ import mysql from 'mysql2/promise';
 // };
 
 // --- env (already loaded in index.js) ---
-const DB_HOST = process.env.DB_HOST || '68.178.148.169';  // GoDaddy: 'localhost'; local can be '127.0.0.1'
+const DB_HOST = process.env.DB_HOST || 'localhost';  // GoDaddy: 'localhost'; local can be '127.0.0.1'
 const DB_PORT = Number(process.env.DB_PORT || 3306);
 const DB_NAME = process.env.DB_NAME || 'whatsappTool';
 const DB_USER = process.env.DB_USER ?? 'pankaj_tinku';

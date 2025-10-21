@@ -23,7 +23,7 @@ app.set('view engine', 'hbs')
 app.set('views', path.join(__dirname, 'views'))
 
 app.use(cors({
-    origin: ["http://localhost:3002", "http://localhost:5173"],
+    origin: ["http://localhost:3002", "http://localhost:5173","https://bulk-whatsapp-manager-backend.onrender.com"],
     credentials: true
 }))
 
@@ -45,6 +45,8 @@ import { templateRouter } from './routes/template.routes.js'
 import { campaignRouter } from './routes/campaign.routes.js'
 import { employeeRouter } from './routes/employee.routes.js'
 import { testRouter } from './routes/test.routes.js'
+import { departmentRouter } from './routes/department.routes.js'
+import { servicesRouter } from './routes/services.routes.js'
 
 // Frontend routes - MUST come before static middleware
 app.get("/", (req, res) => res.redirect("/login"));
@@ -143,6 +145,10 @@ app.use("/api/v1/templates", templateRouter);
 app.use("/api/v1/campaigns", campaignRouter);
 app.use("/api/v1/employees", employeeRouter);
 app.use("/api/v1", testRouter); // optional
+
+
+app.use("/api/v1/departments", departmentRouter);
+app.use("/api/v1/services", servicesRouter);
 
 
 export {app}

@@ -5,6 +5,8 @@ import { Template } from './Template.js';
 import { Campaign } from './Campaign.js';
 import { MessageLog } from './MessageLog.js';
 import Employee from './Employee.js';
+import { Department } from './Department.js'; // ✅ NEW
+import { Service } from './Service.js';
 
 /**
  * IMPORTANT:
@@ -33,7 +35,7 @@ Template.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 User.hasMany(Campaign, { foreignKey: 'userId', as: 'campaigns' });
 Campaign.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
-// Business ⇄ Campaign   ✅ NEW
+// Business ⇄ Campaign
 Business.hasMany(Campaign, { foreignKey: 'businessId', as: 'campaigns' });
 Campaign.belongsTo(Business, { foreignKey: 'businessId', as: 'business' });
 
@@ -51,6 +53,23 @@ MessageLog.belongsTo(Customer, { foreignKey: 'customerId', as: 'customer' });
 Template.hasMany(MessageLog, { foreignKey: 'templateId', as: 'messageLogs' });
 MessageLog.belongsTo(Template, { foreignKey: 'templateId', as: 'template' });
 
+/* ✅ NEW: Business ⇄ Department */
+Business.hasMany(Department, {
+  foreignKey: 'businessId',
+  as: 'departments',
+  onUpdate: 'CASCADE',
+  onDelete: 'CASCADE',
+});
+Department.belongsTo(Business, {
+  foreignKey: 'businessId',
+  as: 'business',
+  onUpdate: 'CASCADE',
+  onDelete: 'CASCADE',
+});
+
+Business.hasMany(Service, { foreignKey: 'businessId', as: 'services' });
+Service.belongsTo(Business, { foreignKey: 'businessId', as: 'business' });
+
 export {
   User,
   Business,
@@ -58,5 +77,6 @@ export {
   Template,
   Campaign,
   MessageLog,
-  Employee
+  Department, // ✅ export it
+  Service,
 };
