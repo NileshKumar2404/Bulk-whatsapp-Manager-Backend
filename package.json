@@ -23,9 +23,9 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon -r dotenv/config --experimental-json-modules src/index.js",
-    "start": "node -r dotenv/config --experimental-json-modules src/index.js",
-    "reset-db": "node -r dotenv/config --experimental-json-modules reset-database.js"
+    "dev": "dotenv_config_path=./property.env nodemon -r dotenv/config --experimental-json-modules src/index.js",
+    "start": "dotenv_config_path=./property.env node -r dotenv/config --experimental-json-modules src/index.js",
+    "reset-db": "dotenv_config_path=./property.env node -r dotenv/config --experimental-json-modules reset-database.js"
   },
   "dependencies": {
     "axios": "^1.12.2",
