@@ -48,6 +48,8 @@ import { testRouter } from './routes/test.routes.js'
 import { departmentRouter } from './routes/department.routes.js'
 import { servicesRouter } from './routes/services.routes.js'
 import { designationsRoutes } from './routes/designations.routes.js'
+import {leaveTypesRoutes} from './routes/leaveTypes.routes.js';
+import {leaveRequestsRoutes} from './routes/leaveRequests.routes.js';
 
 // Frontend routes - MUST come before static middleware
 app.get("/", (req, res) => res.redirect("/login"));
@@ -151,6 +153,9 @@ app.use("/api/v1", testRouter); // optional
 app.use("/api/v1/departments", departmentRouter);
 app.use("/api/v1/services", servicesRouter);
 app.use('/api/v1/designations', designationsRoutes);
+
+app.use('/api/leave-types', leaveTypesRoutes);
+app.use('/api/leave-requests', leaveRequestsRoutes);
 
 
 export {app}

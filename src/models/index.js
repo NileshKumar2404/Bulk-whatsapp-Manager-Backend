@@ -8,6 +8,8 @@ import Employee from './Employee.js';
 import { Department } from './Department.js'; // ✅ NEW
 import { Service } from './Service.js';
 import { Designation } from './Designation.js';
+import { LeaveType } from './LeaveType.js';
+import { LeaveRequest } from './LeaveRequest.js';
 
 /**
  * IMPORTANT:
@@ -75,6 +77,26 @@ Service.belongsTo(Business, { foreignKey: 'businessId', as: 'business' });
 Business.hasMany(Designation, { foreignKey: 'businessId', as: 'designations' });
 Designation.belongsTo(Business, { foreignKey: 'businessId', as: 'business' });
 
+// Business ⇄ LeaveType
+Business.hasMany(LeaveType, { foreignKey: 'businessId', as: 'leaveTypes' });
+LeaveType.belongsTo(Business, { foreignKey: 'businessId', as: 'business' });
+
+// Business ⇄ LeaveRequest
+Business.hasMany(LeaveRequest, { foreignKey: 'businessId', as: 'leaveRequests' });
+LeaveRequest.belongsTo(Business, { foreignKey: 'businessId', as: 'business' });
+
+// Employee ⇄ LeaveRequest
+Employee.hasMany(LeaveRequest, { foreignKey: 'employeeId', as: 'leaveRequests' });
+LeaveRequest.belongsTo(Employee, { foreignKey: 'employeeId', as: 'employee' });
+
+// LeaveType ⇄ LeaveRequest
+LeaveType.hasMany(LeaveRequest, { foreignKey: 'leaveTypeId', as: 'requests' });
+LeaveRequest.belongsTo(LeaveType, { foreignKey: 'leaveTypeId', as: 'leaveType' });
+
+// Approver (User) ⇄ LeaveRequest
+User.hasMany(LeaveRequest, { foreignKey: 'approverId', as: 'approvedLeaves' });
+LeaveRequest.belongsTo(User, { foreignKey: 'approverId', as: 'approver' });
+
 export {
   User,
   Business,
@@ -85,4 +107,6 @@ export {
   Department, // ✅ export it
   Service,
   Designation,
+  LeaveType,
+  LeaveRequest,
 };
