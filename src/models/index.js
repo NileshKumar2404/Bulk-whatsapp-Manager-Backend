@@ -7,6 +7,7 @@ import { MessageLog } from './MessageLog.js';
 import Employee from './Employee.js';
 import { Department } from './Department.js'; // ✅ NEW
 import { Service } from './Service.js';
+import { Designation } from './Designation.js';
 
 /**
  * IMPORTANT:
@@ -70,6 +71,10 @@ Department.belongsTo(Business, {
 Business.hasMany(Service, { foreignKey: 'businessId', as: 'services' });
 Service.belongsTo(Business, { foreignKey: 'businessId', as: 'business' });
 
+// Business ⇄ Designation
+Business.hasMany(Designation, { foreignKey: 'businessId', as: 'designations' });
+Designation.belongsTo(Business, { foreignKey: 'businessId', as: 'business' });
+
 export {
   User,
   Business,
@@ -79,4 +84,5 @@ export {
   MessageLog,
   Department, // ✅ export it
   Service,
+  Designation,
 };
